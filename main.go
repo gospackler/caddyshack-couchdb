@@ -20,12 +20,35 @@ type Definition struct {
     Config resource.Definition
 }
 
+// GetConfig returns the config resource of the adapter
 func (adp *Definition) GetConfig() (rsc resource.Definition) {
     return adp.Config
 }
 
+// SetConfig sets the config resource of the adapter
 func (adp *Definition) SetConfig(rsc resource.Definition) (error) {
     adp.Config = rsc
+    return nil
+}
+
+// GetConfig returns the name of the adapter
+func (adp *Definition) GetName() (string) {
+    return adp.Name
+}
+
+// SetConfig sets the name resource of the adapter
+func (adp *Definition) SetName(name string) (error) {
+    adp.Name = name
+    return nil
+}
+
+// Connect connects the adapter to the database
+func (adp *Definition) Open() (error) {
+    return nil
+}
+
+// Close closes the connection to teh database
+func (adp *Definition) Close() (error) {
     return nil
 }
 
