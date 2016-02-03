@@ -11,7 +11,7 @@ import (
 
 const DBNAME string = "_CADDYSHACK"
 
-var Adapter = Definition{
+var Adapter = &Definition{
     Name: "couchdb",
 }
 
