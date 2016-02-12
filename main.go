@@ -1,11 +1,11 @@
 package adapters
 
 import (
+	couchColl "github.com/bushwood/caddyshack-couchdb/collection"
+	"github.com/bushwood/caddyshack/collection"
+	"github.com/bushwood/caddyshack/model"
 	"github.com/bushwood/caddyshack/resource"
 )
-
-// DBNAME isa contant used for interal database intantiation
-const DBNAME string = "_CADDYSHACK"
 
 // Adapter exports the struct instance of the adapter
 var Adapter = &Definition{
@@ -40,12 +40,7 @@ func (adp *Definition) SetName(name string) error {
 	return nil
 }
 
-// Close releases the connection back to the pool
-func (adp *Definition) Close() error {
-	return nil
-}
-
-// Open retrieves a connection from the connection pool
-func (adp *Definition) Open() error {
-	return nil
+// BuildCollection builds a collection for the adapter for teh provided model
+func (adp *Definition) BuildCollection(m model.Definition) (collection.Definition, error) {
+	return &couchColl.Definition{m.Name, adp, m}, nil
 }
