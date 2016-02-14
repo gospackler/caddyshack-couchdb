@@ -1,8 +1,10 @@
 package collection
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/bushwood/caddyshack/adapter"
 	"github.com/bushwood/caddyshack/model"
+	"github.com/patrickjuchli/couch"
 )
 
 // Definition specifies the adapter implementaiton for a collection
@@ -10,6 +12,10 @@ type Definition struct {
 	Name    string
 	Adapter adapter.Definition
 	Model   model.Definition
+	URL     string
+	Creds   *couch.Credentials
+	Server  *couch.Server
+	DB      *couch.Database
 }
 
 // GetName returns the name of the collection
@@ -24,5 +30,6 @@ func (c *Definition) Close() error {
 
 // Open retrieves a connection from the connection pool
 func (c *Definition) Open() error {
+	log.Info(c.Adapter.GetConfig())
 	return nil
 }
