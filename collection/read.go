@@ -2,6 +2,8 @@ package collection
 
 // Read retrieves a collection from the database
 func (c *Definition) Read() error {
+	c.Open()
+	defer c.Close()
 	return nil
 }
 
