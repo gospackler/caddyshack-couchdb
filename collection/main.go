@@ -23,12 +23,12 @@ func (c *Definition) GetName() string {
 	return c.Name
 }
 
-// Close releases the connection back to the pool
+// Close releases the connection back to the pool - HANDLED BY BASE ORM
 func (c *Definition) Close() error {
 	return nil
 }
 
-// Open retrieves a connection from the connection pool
+// Open retrieves a connection from the connection pool - HANDLED BY BASE ORM
 func (c *Definition) Open() error {
 	log.Info(c.Adapter.GetConfig())
 	return nil
