@@ -8,7 +8,7 @@ import (
 	"github.com/bushwood/caddyshack/collection"
 	"github.com/bushwood/caddyshack/model"
 	"github.com/bushwood/caddyshack/resource"
-	"github.com/patrickjuchli/couch"
+	"github.com/bushwood/couchdb"
 )
 
 // Adapter exports the struct instance of the adapter
@@ -33,8 +33,8 @@ func (adp *Definition) SetConfig(rsc resource.Definition) error {
 	if adp.Config.Host == "" {
 		return errors.New("No host found for adapter [" + adp.Name + "]")
 	}
-	if adp.Config.Port == "" {
-		adp.Config.Port = "5984" // default to couch port
+	if adp.Config.Port == 0 {
+		adp.Config.Port = 5984 // default to couch port
 	}
 	return nil
 }
@@ -52,32 +52,26 @@ func (adp *Definition) SetName(name string) error {
 
 // BuildCollection builds a collection for the adapter for teh provided model
 func (adp *Definition) BuildCollection(m model.Definition) (collection.Definition, error) {
+	var fallback collection.Definition
 	config := adp.GetConfig()
 
-	var c *couch.Credentials
-	if config.Username != "" && config.Password != "" {
-		c = couch.NewCredentials(config.Username, config.Password)
-	} else {
-		c = nil
+	couch := couchdb.NewClient(config.Host, config.Port)
+	couch.SetAuth(config.Username, couch.Password)
+	couch.SetTimeout(config.Timeout)
+	db := couch.DB(m.Name)
+	exists, eErr := db.Exists()
+	if eErr != nil {
+		log.Info("fuck")
+		return fallback, eErr
 	}
-
-	if config.Host == "" {
-		return &couchColl.Definition{}, errors.New("No host found for adapter [" + adp.Name + "]")
-	}
-
-	u := "http"
-	if config.Secure == true {
-		u += "s"
-	}
-	u += "://" + config.Host + ":" + config.Port
-	s := couch.NewServer(u, c)
-	db := s.Database(m.Name)
-	if !db.Exists() {
-		log.Info(c)
-		err := db.Create()
-		if err != nil {
-			return &couchColl.Definition{}, err
+	if !exists {
+		cErr := db.Create()
+		log.Info(cErr)
+		if cErr != nil {
+			return fallback, cErr
 		}
 	}
-	return &couchColl.Definition{m.Name, adp, m, u, c, s, db}, nil
+
+	return &couchColl.Definition{}, nil
+	return &couchColl.Definition{m.Name, adp, m, &couch, &db}, nil
 }
