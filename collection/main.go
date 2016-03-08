@@ -1,18 +1,16 @@
 package collection
 
 import (
-	"github.com/bushwood/caddyshack/adapter"
-	"github.com/bushwood/caddyshack/model"
-	"github.com/bushwood/couchdb"
+	"github.com/georgethomas111/caddyshack/model"
+	"github.com/georgethomas111/couchdb"
 )
 
 // Definition specifies the adapter implementaiton for a collection
 type Definition struct {
-	Name    string
-	Adapter adapter.Definition
-	Model   model.Definition
-	Server  *couchdb.Client
-	DB      *couchdb.Database
+	Name   string
+	Model  *model.Definition
+	Server *couchdb.Client
+	DB     *couchdb.Database
 }
 
 // GetName returns the name of the collection
