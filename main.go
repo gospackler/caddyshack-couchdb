@@ -1,76 +1,91 @@
-package adapters
+package adapter
 
 import (
-	"errors"
+	//	"errors"
+	"encoding/json"
 
-	log "github.com/Sirupsen/logrus"
-	couchColl "github.com/georgethomas111/caddyshack-couchdb/collection"
-	"github.com/georgethomas111/caddyshack/collection"
+	"fmt"
+
+	"github.com/georgethomas111/caddyshack"
 	"github.com/georgethomas111/caddyshack/model"
 	"github.com/georgethomas111/caddyshack/resource"
 	"github.com/georgethomas111/couchdb"
 )
 
-// Adapter exports the struct instance of the adapter
-var Adapter = &Definition{
-	Name: "couchdb",
+type CouchStore struct {
+	model        *model.Definition
+	client       *couchdb.Client
+	StoreName    string
+	DatabaseName string
+	DbObj        *couchdb.Database
 }
 
-// Definition defines the implementation of the adapter interface
-type Definition struct {
-	Name   string
-	Config *resource.Definition
-}
+func NewCouchStore(res *resource.Definition) (couchStore *CouchStore) {
 
-// GetConfig returns the config resource of the adapter
-func (adp *Definition) GetConfig() (rsc *resource.Definition) {
-	return adp.Config
-}
-
-// SetConfig sets the config resource of the adapter
-func (adp *Definition) SetConfig(rsc *resource.Definition) error {
-	adp.Config = rsc
-	if adp.Config.Host == "" {
-		return errors.New("No host found for adapter [" + adp.Name + "]")
+	client := couchdb.NewClient(res.Host, res.Port)
+	couchStore = &CouchStore{
+		client:       &client,
+		StoreName:    "couchdb",
+		DatabaseName: res.Name,
 	}
-	if adp.Config.Port == 0 {
-		adp.Config.Port = 5984 // default to couch port
-	}
-	return nil
+	return
 }
 
-// GetName returns the name of the adapter
-func (adp *Definition) GetName() string {
-	return adp.Name
-}
+func (c *CouchStore) Init(model *model.Definition) (error, caddyshack.Store) {
+	dbObj := c.client.DB(c.DatabaseName)
+	c.model = model
 
-// SetName sets the name resource of the adapter
-func (adp *Definition) SetName(name string) error {
-	adp.Name = name
-	return nil
-}
-
-// BuildCollection builds a collection for the adapter for teh provided model
-func (adp *Definition) BuildCollection(m *model.Definition) (collection.Definition, error) {
-
-	config := adp.GetConfig()
-
-	couch := couchdb.NewClient(config.Host, config.Port)
-	couch.SetAuth(config.Username, couch.Password)
-	couch.SetTimeout(config.Timeout)
-	db := couch.DB(m.Name)
-	exists, eErr := db.Exists()
-	if eErr != nil {
-		log.Info("fuck")
-		return nil, eErr
-	}
-	if !exists {
-		cErr := db.Create()
-		log.Info(cErr)
-		if cErr != nil {
-			return nil, cErr
+	status, err := dbObj.Exists()
+	if err == nil {
+		if status == false {
+			err = dbObj.Create()
 		}
 	}
+	c.DbObj = &dbObj
+	return err, c
+}
 
-	return &couchColl.Definition{m.Name, m, &couch, &db}, nil
+func (c *CouchStore) GetName() string {
+
+	return c.StoreName
+}
+
+func (c *CouchStore) SetName(name string) error {
+
+	c.StoreName = name
+	return nil
+}
+
+// TODO : This method could be part of the interface in general which can be overridden
+// Does it work that way ??
+func (c *CouchStore) verify(obj caddyshack.StoreObject) {
+
+}
+
+func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
+
+	strObj, err := json.Marshal(obj)
+
+	doc := couchdb.NewDocument("", "", c.DbObj)
+	err = doc.Create(strObj)
+	obj.SetKey(doc.Id)
+	return
+}
+
+func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
+
+	doc := couchdb.NewDocument(key, "", c.DbObj)
+	jsonObj, err := doc.GetDocument()
+
+	type UpdateObj struct {
+		couchdb.CouchWrapperUpdate
+		TestObj
+	}
+
+	obj := &UpdateObj{}
+	json.Unmarshal(jsonObj, obj)
+
+	fmt.Println("***Json :  Object", obj)
+	obj.SetKey(doc.Id)
+	return err, obj
 }
