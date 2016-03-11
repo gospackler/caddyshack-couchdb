@@ -1,10 +1,9 @@
 package adapter
 
 import (
-	//	"errors"
 	"encoding/json"
 
-	"fmt"
+	"reflect"
 
 	"github.com/georgethomas111/caddyshack"
 	"github.com/georgethomas111/caddyshack/model"
@@ -18,15 +17,17 @@ type CouchStore struct {
 	StoreName    string
 	DatabaseName string
 	DbObj        *couchdb.Database
+	ObjType      reflect.Type
 }
 
-func NewCouchStore(res *resource.Definition) (couchStore *CouchStore) {
+func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (couchStore *CouchStore) {
 
 	client := couchdb.NewClient(res.Host, res.Port)
 	couchStore = &CouchStore{
 		client:       &client,
 		StoreName:    "couchdb",
 		DatabaseName: res.Name,
+		ObjType:      reflect.ValueOf(objModel).Elem().Type(),
 	}
 	return
 }
@@ -76,16 +77,17 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
 	doc := couchdb.NewDocument(key, "", c.DbObj)
 	jsonObj, err := doc.GetDocument()
-
-	type UpdateObj struct {
-		couchdb.CouchWrapperUpdate
-		TestObj
+	if err != nil {
+		return err, nil
 	}
 
-	obj := &UpdateObj{}
-	json.Unmarshal(jsonObj, obj)
+	dynmaicObj := reflect.New(c.ObjType).Interface()
+	err = json.Unmarshal(jsonObj, dynmaicObj)
+	if err != nil {
+		return err, nil
+	}
 
-	fmt.Println("***Json :  Object", obj)
+	obj := dynmaicObj.(caddyshack.StoreObject)
 	obj.SetKey(doc.Id)
 	return err, obj
 }

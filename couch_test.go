@@ -4,6 +4,7 @@ import (
 	"github.com/georgethomas111/caddyshack"
 	"github.com/georgethomas111/caddyshack/model"
 	"github.com/georgethomas111/caddyshack/resource"
+	"github.com/georgethomas111/couchdb"
 	"testing"
 )
 
@@ -12,6 +13,11 @@ type TestObj struct {
 	Name  string
 	Value string
 	Id    string
+}
+
+type RetTestObj struct {
+	couchdb.CouchWrapperUpdate
+	TestObj
 }
 
 func (t *TestObj) GetKey() string {
@@ -34,7 +40,7 @@ func TestInit(t *testing.T) {
 	}
 
 	// From storedemo.go
-	couchStore := NewCouchStore(res)
+	couchStore := NewCouchStore(res, &RetTestObj{})
 	err := cs.LoadStore(couchStore)
 
 	if err != nil {
@@ -73,9 +79,11 @@ func TestInit(t *testing.T) {
 		t.Error("Error while retreiving object")
 	}
 
-	t.Log("Retreived Object", obj)
-
 	if obj.GetKey() != testObj.GetKey() {
 		t.Error("Retreived wrong object")
 	}
+
+	actualObj := obj.(*RetTestObj)
+	t.Log("Got the actula object back.", actualObj.TestObj)
+
 }
