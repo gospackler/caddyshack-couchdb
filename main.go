@@ -91,3 +91,16 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 	obj.SetKey(doc.Id)
 	return err, obj
 }
+
+// The object passed should have CouchWrapperUpdate as an anonymous field containing the details.
+func (c *CouchStore) UpdateOne(obj caddyshack.StoreObject) (err error) {
+
+	// FIXME Actually a hack which works because of the implementation.
+	err = c.Create(obj)
+	return
+}
+
+func (c *CouchStore) DestroyOne(key string) error {
+	// Destroy not yet implemented need to implement it in the lower level. Missed it!
+	return nil
+}
