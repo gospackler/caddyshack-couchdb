@@ -5,10 +5,10 @@ import (
 
 	"reflect"
 
-	"github.com/georgethomas111/caddyshack"
-	"github.com/georgethomas111/caddyshack/model"
-	"github.com/georgethomas111/caddyshack/resource"
-	"github.com/georgethomas111/couchdb"
+	"github.com/bushwood/caddyshack"
+	"github.com/bushwood/caddyshack/model"
+	"github.com/bushwood/caddyshack/resource"
+	"github.com/bushwood/couchdb"
 )
 
 type CouchStore struct {
