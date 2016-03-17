@@ -95,6 +95,18 @@ func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
 	return
 }
 
+func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject) {
+
+	dynmaicObj := reflect.New(c.ObjType).Interface()
+	err := json.Unmarshal(jsonObj, dynmaicObj)
+	if err != nil {
+		return err, nil
+	}
+
+	obj := dynmaicObj.(caddyshack.StoreObject)
+	return nil, obj
+}
+
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
 	doc := couchdb.NewDocument(key, "", c.DbObj)
@@ -103,13 +115,7 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 		return err, nil
 	}
 
-	dynmaicObj := reflect.New(c.ObjType).Interface()
-	err = json.Unmarshal(jsonObj, dynmaicObj)
-	if err != nil {
-		return err, nil
-	}
-
-	obj := dynmaicObj.(caddyshack.StoreObject)
+	err, obj := c.GetStoreObj(jsonObj)
 	obj.SetKey(doc.Id)
 	return err, obj
 }

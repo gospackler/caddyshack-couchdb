@@ -130,4 +130,7 @@ func TestRead(t *testing.T) {
 	} else {
 		t.Log("Read", objects)
 	}
+	for _, obj := range objects {
+		t.Log(obj.GetKey())
+	}
 }

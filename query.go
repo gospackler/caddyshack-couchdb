@@ -1,9 +1,10 @@
 package adapter
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/bushwood/caddyshack"
 	"github.com/bushwood/couchdb"
@@ -36,6 +37,7 @@ func (v *ViewObj) GetCondition() string {
 type CouchQuery struct {
 	Condition string // Code for the view RawJson
 	ViewName  string
+	Store     *CouchStore
 	desDoc    *couchdb.DesignDoc
 }
 
@@ -48,6 +50,7 @@ func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couc
 		desDoc:    desDocObj,
 		Condition: line,
 		ViewName:  viewName,
+		Store:     db,
 	}
 	return
 }
@@ -73,7 +76,34 @@ func (q *CouchQuery) GetCondition() string {
 	return q.Condition
 }
 
-func (q *CouchQuery) Execute() (err error, result []caddyshack.StoreObject) {
+func (q *CouchQuery) MarshalStoreObjects(data []byte) (err error, result []caddyshack.StoreObject) {
+
+	jsonStream := strings.NewReader(string(data))
+	jsonDecoder := json.NewDecoder(jsonStream)
+
+	type ObjInfo struct {
+		NumRows int               `json:"total_rows"`
+		Offset  int               `json:"offset"`
+		Array   []json.RawMessage `json:"rows"`
+	}
+
+	objInfo := new(ObjInfo)
+
+	err = jsonDecoder.Decode(objInfo)
+
+	for _, row := range objInfo.Array {
+		// Does the reflection part
+		err, storeObj := q.Store.GetStoreObj(row)
+		if err != nil {
+			err = errors.New("Marshal Object" + err.Error())
+		}
+		result = append(result, storeObj)
+	}
+
+	return
+}
+
+func (q *CouchQuery) Execute() (error, []caddyshack.StoreObject) {
 	// Currently O(n) w.r.t to views
 	status := q.desDoc.CheckExists(q.ViewName)
 
@@ -84,7 +114,11 @@ func (q *CouchQuery) Execute() (err error, result []caddyshack.StoreObject) {
 		} else {
 			// Print for now create store Object later.
 			// FIXME Handle unmarshalling over here.
-			fmt.Println(string(data))
+			err, result := q.MarshalStoreObjects(data)
+			if err != nil {
+				return errors.New("Could not Mrshal json" + err.Error()), result
+			}
+			return nil, result
 		}
 	} else {
 		// The intutive version would be creating an object and then adding methods to it.
@@ -92,12 +126,12 @@ func (q *CouchQuery) Execute() (err error, result []caddyshack.StoreObject) {
 		newView.RawStatus = true
 		newView.RawJson = q.Condition
 		q.desDoc.AddView(newView)
-		err = q.desDoc.SaveDoc()
+		err := q.desDoc.SaveDoc()
 		// possible infinite recursion. Should be fun :D
-		err, result = q.Execute()
+		err, result := q.Execute()
+		return err, result
 	}
 
-	return
 	// If it exists get the view back.
 	// Otherwise Get Retrieve the Data and Marshal the store Object from the json..
 }
