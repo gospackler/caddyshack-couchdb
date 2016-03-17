@@ -10,9 +10,11 @@ import (
 
 // Create a compatable storeObject
 type TestObj struct {
-	Name  string
-	Value string
-	Id    string
+	Name   string `json:"name" query:""`
+	Value  string `json:"surprise"`
+	Field1 string `json:"field1"`
+	Age    int    `json:"age" query:"age < 20"`
+	Id     string `json:"id"`
 }
 
 type RetTestObj struct {
@@ -30,6 +32,8 @@ func (t *TestObj) GetKey() string {
 func (t *TestObj) SetKey(id string) {
 	t.Id = id
 }
+
+var CouchStoreIns *CouchStore
 
 func TestInit(t *testing.T) {
 
@@ -64,13 +68,15 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Error("Error while retreiving caddy ", err)
 	}
+	CouchStoreIns = couchStore
 }
 
 func TestCreate(t *testing.T) {
 
 	testObj := &TestObj{
-		Name:  "abcd",
-		Value: "1234",
+		Name:   "abcd",
+		Value:  "1234",
+		Field1: "field1",
 	}
 
 	err := Caddy.StoreIns.Create(testObj)
@@ -85,7 +91,7 @@ func TestCreate(t *testing.T) {
 
 var RetrObject *RetTestObj
 
-func TestRead(t *testing.T) {
+func TestReadOne(t *testing.T) {
 
 	err, obj := Caddy.StoreIns.ReadOne(Key)
 	if err != nil {
@@ -97,11 +103,12 @@ func TestRead(t *testing.T) {
 	}
 
 	actualObj := obj.(*RetTestObj)
-	t.Log("Got the actula object back.", actualObj.TestObj)
+	t.Log("Got the actual object back.", actualObj.TestObj)
 	RetrObject = actualObj
 }
 
 func TestUpdate(t *testing.T) {
+
 	RetrObject.TestObj.Name = "Updated"
 	RetrObject.TestObj.Value = "-1"
 	err := Caddy.StoreIns.UpdateOne(RetrObject)
@@ -109,4 +116,18 @@ func TestUpdate(t *testing.T) {
 		t.Log("Error while updating object, ", err)
 	}
 	t.Log("Check the updated object in the DB if delete is disabled with key", Key)
+}
+
+func TestRead(t *testing.T) {
+
+	// Every Query is the request to a view.
+
+	//	NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", CouchStoreIns)
+	query := NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", CouchStoreIns)
+	err, objects := Caddy.StoreIns.Read(query)
+	if err != nil {
+		t.Error("Error while reading query ", query, " ", err)
+	} else {
+		t.Log("Read", objects)
+	}
 }
