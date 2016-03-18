@@ -12,38 +12,60 @@ import (
 )
 
 type CouchStore struct {
-	model        *model.Definition
-	client       *couchdb.Client
-	StoreName    string
-	DatabaseName string
-	DbObj        *couchdb.Database
-	ObjType      reflect.Type
+	model  *model.Definition
+	client *couchdb.Client
+	DbObj  *couchdb.Database
+	DesDoc map[string]*couchdb.DesignDoc
+
+	// Fields for caddyshack follows
+	// This is needed for identifying adpter for caddyshack.
+	StoreName string
+	// For all queries, receiver for data.
+	ObjType reflect.Type
 }
 
-func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (couchStore *CouchStore) {
+// FIXME : Assert Kind of the objModel passed is a pointer.
+func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c *CouchStore) {
 
 	client := couchdb.NewClient(res.Host, res.Port)
-	couchStore = &CouchStore{
-		client:       &client,
-		StoreName:    "couchdb",
-		DatabaseName: res.Name,
-		ObjType:      reflect.ValueOf(objModel).Elem().Type(),
+	c = &CouchStore{
+		client:    &client,
+		StoreName: "couchdb",
+		ObjType:   reflect.ValueOf(objModel).Elem().Type(),
+		DesDoc:    make(map[string]*couchdb.DesignDoc),
 	}
-	return
-}
 
-func (c *CouchStore) Init(model *model.Definition) (error, caddyshack.Store) {
-	dbObj := c.client.DB(c.DatabaseName)
-	c.model = model
-
+	dbObj := c.client.DB(res.Name)
 	status, err := dbObj.Exists()
 	if err == nil {
 		if status == false {
 			err = dbObj.Create()
+			if err != nil {
+				panic("Could not create a database " + err.Error())
+			}
 		}
+	} else {
+		panic("Could not connect with db " + err.Error())
 	}
 	c.DbObj = &dbObj
-	return err, c
+	return
+}
+
+// FIXME Reason out and remove this method in future.
+func (c *CouchStore) Init(model *model.Definition) (error, caddyshack.Store) {
+	c.model = model
+	return nil, c
+}
+
+func (c *CouchStore) GetDesignDoc(docName string) *couchdb.DesignDoc {
+
+	_, exists := c.DesDoc[docName] //Checking if the view exists.
+	if exists == true {
+		return c.DesDoc[docName]
+	} else {
+		c.DesDoc[docName] = couchdb.NewDesignDoc(docName, c.DbObj)
+		return c.DesDoc[docName]
+	}
 }
 
 func (c *CouchStore) GetName() string {
@@ -73,6 +95,18 @@ func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
 	return
 }
 
+func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject) {
+
+	dynmaicObj := reflect.New(c.ObjType).Interface()
+	err := json.Unmarshal(jsonObj, dynmaicObj)
+	if err != nil {
+		return err, nil
+	}
+
+	obj := dynmaicObj.(caddyshack.StoreObject)
+	return nil, obj
+}
+
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
 	doc := couchdb.NewDocument(key, "", c.DbObj)
@@ -81,15 +115,17 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 		return err, nil
 	}
 
-	dynmaicObj := reflect.New(c.ObjType).Interface()
-	err = json.Unmarshal(jsonObj, dynmaicObj)
-	if err != nil {
-		return err, nil
-	}
-
-	obj := dynmaicObj.(caddyshack.StoreObject)
+	err, obj := c.GetStoreObj(jsonObj)
 	obj.SetKey(doc.Id)
 	return err, obj
+}
+
+func (c *CouchStore) Read(query caddyshack.Query) (error, []caddyshack.StoreObject) {
+
+	err, objects := query.Execute()
+	// Use the rawJson to check for the view.
+
+	return err, objects
 }
 
 // The object passed should have CouchWrapperUpdate as an anonymous field containing the details.
