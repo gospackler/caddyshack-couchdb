@@ -95,8 +95,11 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore, res *resource.Defin
 	desDoc := db.GetDesignDoc(res.DesDoc)
 	index, status := desDoc.CheckExists(viewName)
 
+	fmt.Println("Index, Status", index, status)
+
 	if status == false {
 		desDoc.AddView(view)
+		fmt.Println("Added view", desDoc, view)
 	} else {
 		if index < 0 {
 			desDoc.LastView = view
@@ -126,16 +129,63 @@ func (q *CouchQuery) GetCondition() string {
 }
 
 func (q *CouchQuery) getViewName(obj caddyshack.StoreObject) string {
-	return "obj_view1"
+	structObj := reflect.ValueOf(obj).Elem()
+	typeOfObj := structObj.Type()
+	return strings.ToLower(typeOfObj.Name())
 }
 
-func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) string {
+func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) (condStr string) {
 
-	return "doc.age < 21"
+	structObj := reflect.ValueOf(obj).Elem()
+	typeOfObj := structObj.Type()
+
+	firstCond := true
+
+	if structObj.Kind() == reflect.Struct {
+		for index := 0; index < typeOfObj.NumField(); index++ {
+			structField := typeOfObj.Field(index)
+			fieldCond := structField.Tag.Get("condition")
+			if fieldCond != "" {
+				if firstCond {
+					condStr = condStr + prefix + "." + fieldCond
+					firstCond = false
+				} else {
+					condStr = condStr + " AND " + prefix + "." + fieldCond
+				}
+			}
+		}
+	} else {
+		panic(errors.New("Expected a struct pointer as input."))
+	}
+
+	return
 }
 
-func (q *CouchQuery) getEmits(obj caddyshack.StoreObject, prefix string) string {
-	return "doc.age, doc.surprise"
+func (q *CouchQuery) getEmits(obj caddyshack.StoreObject, prefix string) (emits string) {
+
+	structObj := reflect.ValueOf(obj).Elem()
+	typeOfObj := structObj.Type()
+
+	firstCond := true
+
+	if structObj.Kind() == reflect.Struct {
+		for index := 0; index < typeOfObj.NumField(); index++ {
+			structField := typeOfObj.Field(index)
+			jsonStr := structField.Tag.Get("json")
+			if jsonStr != "" {
+				if firstCond {
+					emits = emits + prefix + "." + jsonStr
+					firstCond = false
+				} else {
+					emits = emits + ", " + prefix + "." + jsonStr
+				}
+			}
+		}
+	} else {
+		panic(errors.New("Expected a struct pointer as input."))
+	}
+
+	return
 }
 
 func (q *CouchQuery) MarshalStoreObjects(data []byte) (err error, result []caddyshack.StoreObject) {
