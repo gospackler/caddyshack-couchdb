@@ -3,10 +3,12 @@ package adapter
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/bushwood/caddyshack"
+	"github.com/bushwood/caddyshack/resource"
 	"github.com/bushwood/couchdb"
 )
 
@@ -52,19 +54,66 @@ func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couc
 		ViewName:  viewName,
 		Store:     db,
 	}
+
+	// Correct the code over here.
+	newView := &couchdb.View{Name: viewName}
+	newView.RawStatus = true
+	newView.RawJson = couchQuery.Condition
+
+	index, status := couchQuery.desDoc.CheckExists(viewName)
+
+	fmt.Println("Views -->", couchQuery.desDoc.Views)
+	fmt.Println("LastView -->", couchQuery.desDoc.LastView)
+	if status == false {
+		couchQuery.desDoc.AddView(newView)
+
+		err := couchQuery.desDoc.SaveDoc()
+		if err != nil {
+			panic(err)
+		}
+
+	} else {
+		fmt.Println("Index found at ", index)
+		if index < 0 {
+			couchQuery.desDoc.LastView = newView
+		} else {
+			couchQuery.desDoc.Views[index] = newView
+		}
+	}
 	return
 }
 
 // Use reflection to create the query from the tags.
-func NewObjQuery(obj caddyshack.StoreObject, viewName string, desDoc string, db *CouchStore) (query *CouchQuery) {
+func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore, res *resource.Definition) (q *CouchQuery) {
 
-	viewObj := NewViewObj(viewName, obj)
-	desDocObj := db.GetDesignDoc(desDoc)
+	q = new(CouchQuery)
+	prefix := "doc"
 
-	query = &CouchQuery{
-		desDoc:    desDocObj,
-		Condition: viewObj.GetCondition(),
+	viewName := q.getViewName(obj)
+	view := couchdb.NewView(viewName, prefix, q.getCondition(obj, prefix), q.getEmits(obj, prefix))
+	//Creates the DesignDoc if it does not exist.
+	desDoc := db.GetDesignDoc(res.DesDoc)
+	index, status := desDoc.CheckExists(viewName)
+
+	if status == false {
+		desDoc.AddView(view)
+	} else {
+		if index < 0 {
+			desDoc.LastView = view
+		} else {
+			desDoc.Views[index] = view
+		}
 	}
+
+	err := desDoc.SaveDoc()
+	if err != nil {
+		panic(err)
+	}
+
+	q.desDoc = desDoc
+	q.ViewName = viewName
+	q.Store = db
+
 	return
 }
 
@@ -74,6 +123,19 @@ func (q *CouchQuery) SetCondition(cond string) {
 
 func (q *CouchQuery) GetCondition() string {
 	return q.Condition
+}
+
+func (q *CouchQuery) getViewName(obj caddyshack.StoreObject) string {
+	return "obj_view1"
+}
+
+func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) string {
+
+	return "doc.age < 21"
+}
+
+func (q *CouchQuery) getEmits(obj caddyshack.StoreObject, prefix string) string {
+	return "doc.age, doc.surprise"
 }
 
 func (q *CouchQuery) MarshalStoreObjects(data []byte) (err error, result []caddyshack.StoreObject) {
@@ -105,32 +167,22 @@ func (q *CouchQuery) MarshalStoreObjects(data []byte) (err error, result []caddy
 
 func (q *CouchQuery) Execute() (error, []caddyshack.StoreObject) {
 	// Currently O(n) w.r.t to views
-	status := q.desDoc.CheckExists(q.ViewName)
 
-	if status == true {
-		err, data := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName)
-		if err != nil {
-			return errors.New("Error retreiving view : " + err.Error()), nil
-		} else {
-			// Print for now create store Object later.
-			// FIXME Handle unmarshalling over here.
-			err, result := q.MarshalStoreObjects(data)
-			if err != nil {
-				return errors.New("Could not Mrshal json" + err.Error()), result
-			}
-			return nil, result
-		}
+	err, data := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName)
+	if err != nil {
+		return errors.New("Error retreiving view : " + err.Error()), nil
 	} else {
-		// The intutive version would be creating an object and then adding methods to it.
-		newView := &couchdb.View{Name: q.ViewName}
-		newView.RawStatus = true
-		newView.RawJson = q.Condition
-		q.desDoc.AddView(newView)
-		err := q.desDoc.SaveDoc()
-		// possible infinite recursion. Should be fun :D
-		err, result := q.Execute()
-		return err, result
+		// Print for now create store Object later.
+		// FIXME Handle unmarshalling over here.
+		err, result := q.MarshalStoreObjects(data)
+		if err != nil {
+			return errors.New("Could not Marshal json" + err.Error()), result
+		}
+		return nil, result
 	}
+
+	// Move this section to the New
+	// The intutive version would be creating an object and then adding methods to it.
 
 	// If it exists get the view back.
 	// Otherwise Get Retrieve the Data and Marshal the store Object from the json..

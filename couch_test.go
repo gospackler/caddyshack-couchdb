@@ -134,3 +134,28 @@ func TestRead(t *testing.T) {
 		t.Log(obj.GetKey())
 	}
 }
+
+func TestObjQueryRead(t *testing.T) {
+
+	newTestObj := new(TestObj)
+
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
+	}
+
+	store := NewCouchStore(res, newTestObj)
+	query := NewObjQuery(newTestObj, store, res)
+	err, objs := store.Read(query)
+
+	if err != nil {
+		t.Error("Obj Query failed", err)
+	} else {
+		for _, obj := range objs {
+			t.Log(obj.GetKey())
+		}
+	}
+	// Obj query type.
+}

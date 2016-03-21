@@ -3,6 +3,7 @@ package adapter
 import (
 	"encoding/json"
 
+	"fmt"
 	"reflect"
 
 	"github.com/bushwood/caddyshack"
@@ -60,10 +61,21 @@ func (c *CouchStore) Init(model *model.Definition) (error, caddyshack.Store) {
 func (c *CouchStore) GetDesignDoc(docName string) *couchdb.DesignDoc {
 
 	_, exists := c.DesDoc[docName] //Checking if the view exists.
+
+	// FIXME check in the db as well to make sure the document does not exist there.
+
 	if exists == true {
+
 		return c.DesDoc[docName]
 	} else {
-		c.DesDoc[docName] = couchdb.NewDesignDoc(docName, c.DbObj)
+
+		err, doc := couchdb.RetreiveDocFromDb(docName, c.DbObj)
+		fmt.Println("Checking if document with name ", docName, " is present.")
+		if err != nil {
+			c.DesDoc[docName] = couchdb.NewDesignDoc(docName, c.DbObj)
+		} else {
+			c.DesDoc[docName] = doc
+		}
 		return c.DesDoc[docName]
 	}
 }
