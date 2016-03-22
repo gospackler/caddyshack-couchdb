@@ -18,11 +18,19 @@ type TestObj struct {
 }
 
 type TestObjCond struct {
-	Name   string `json:"name"`
-	Value  string `json:"surprise"`
+	Name   string `json:"name" condition:"name == 'Updated'"`
+	Value  string `json:"surprise" condition:"surprise == -1"`
 	Field1 string `json:"field1"`
-	Age    int    `json:"age" condition:"age < 20"`
+	Age    int    `json:"age"`
 	Id     string `json:"id"`
+}
+
+func (t *TestObjCond) GetKey() string {
+	return t.Id
+}
+
+func (t *TestObjCond) SetKey(id string) {
+	t.Id = id
 }
 
 type RetTestObj struct {
@@ -91,6 +99,7 @@ func TestCreate(t *testing.T) {
 		Name:   "abcd",
 		Value:  "1234",
 		Field1: "field1",
+		Age:    10,
 	}
 
 	err := Caddy.StoreIns.Create(testObj)
@@ -172,6 +181,32 @@ func TestObjQueryRead(t *testing.T) {
 	} else {
 		for _, obj := range objs {
 			testObj := obj.(*TestObj)
+			t.Log(testObj)
+		}
+	}
+	// Obj query type.
+}
+
+func TestObjQueryCondRead(t *testing.T) {
+
+	newTestObj := new(TestObjCond)
+
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
+	}
+
+	store := NewCouchStore(res, newTestObj)
+	query := NewObjQuery(newTestObj, store, res)
+	err, objs := store.Read(query)
+
+	if err != nil {
+		t.Error("Obj Query Condition failed", err)
+	} else {
+		for _, obj := range objs {
+			testObj := obj.(*TestObjCond)
 			t.Log(testObj)
 		}
 	}

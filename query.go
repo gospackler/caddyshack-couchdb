@@ -150,7 +150,7 @@ func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) (co
 					condStr = condStr + prefix + "." + fieldCond
 					firstCond = false
 				} else {
-					condStr = condStr + " AND " + prefix + "." + fieldCond
+					condStr = condStr + " && " + prefix + "." + fieldCond
 				}
 			}
 		}
