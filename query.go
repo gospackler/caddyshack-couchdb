@@ -90,7 +90,7 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore, res *resource.Defin
 	prefix := "doc"
 
 	viewName := q.getViewName(obj)
-	view := couchdb.NewView(viewName, prefix, q.getCondition(obj, prefix), q.getEmits(obj, prefix))
+	view := couchdb.NewView(viewName, prefix, q.getCondition(obj, prefix), q.getEmits(obj))
 	//Creates the DesignDoc if it does not exist.
 	desDoc := db.GetDesignDoc(res.DesDoc)
 	index, status := desDoc.CheckExists(viewName)
@@ -161,7 +161,7 @@ func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) (co
 	return
 }
 
-func (q *CouchQuery) getEmits(obj caddyshack.StoreObject, prefix string) (emits string) {
+func (q *CouchQuery) getEmits(obj caddyshack.StoreObject) (emits string) {
 
 	structObj := reflect.ValueOf(obj).Elem()
 	typeOfObj := structObj.Type()
@@ -174,10 +174,10 @@ func (q *CouchQuery) getEmits(obj caddyshack.StoreObject, prefix string) (emits 
 			jsonStr := structField.Tag.Get("json")
 			if jsonStr != "" {
 				if firstCond {
-					emits = emits + prefix + "." + jsonStr
+					emits = emits + "\\\"" + jsonStr + "\\\""
 					firstCond = false
 				} else {
-					emits = emits + ", " + prefix + "." + jsonStr
+					emits = emits + ", \\\"" + jsonStr + "\\\""
 				}
 			}
 		}

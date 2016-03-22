@@ -33,6 +33,12 @@ func (t *TestObj) SetKey(id string) {
 	t.Id = id
 }
 
+func (t *TestObj) String() string {
+	return "\n Name " + t.Name +
+		"\n Value " + t.Value +
+		"\n Field1 " + t.Field1
+}
+
 var CouchStoreIns *CouchStore
 
 func TestInit(t *testing.T) {
@@ -86,7 +92,10 @@ func TestCreate(t *testing.T) {
 	}
 
 	Key = testObj.GetKey()
-	t.Log("Created Object with key", testObj.GetKey())
+	if Key == "" {
+		t.Error("Error while creating, Key not obtained.")
+	}
+	t.Log("Object Created Key :=", testObj.GetKey())
 }
 
 var RetrObject *RetTestObj
@@ -154,7 +163,8 @@ func TestObjQueryRead(t *testing.T) {
 		t.Error("Obj Query failed", err)
 	} else {
 		for _, obj := range objs {
-			t.Log(obj.GetKey())
+			testObj := obj.(*TestObj)
+			t.Log(testObj)
 		}
 	}
 	// Obj query type.
