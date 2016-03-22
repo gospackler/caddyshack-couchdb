@@ -10,10 +10,18 @@ import (
 
 // Create a compatable storeObject
 type TestObj struct {
-	Name   string `json:"name" query:""`
+	Name   string `json:"name"`
 	Value  string `json:"surprise"`
 	Field1 string `json:"field1"`
-	Age    int    `json:"age" query:"age < 20"`
+	Age    int    `json:"age"`
+	Id     string `json:"id"`
+}
+
+type TestObjCond struct {
+	Name   string `json:"name"`
+	Value  string `json:"surprise"`
+	Field1 string `json:"field1"`
+	Age    int    `json:"age" condition:"age < 20"`
 	Id     string `json:"id"`
 }
 
