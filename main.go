@@ -3,7 +3,9 @@ package adapter
 import (
 	"encoding/json"
 
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/bushwood/caddyshack"
 	"github.com/bushwood/caddyshack/model"
@@ -60,10 +62,21 @@ func (c *CouchStore) Init(model *model.Definition) (error, caddyshack.Store) {
 func (c *CouchStore) GetDesignDoc(docName string) *couchdb.DesignDoc {
 
 	_, exists := c.DesDoc[docName] //Checking if the view exists.
+
+	// FIXME check in the db as well to make sure the document does not exist there.
+
 	if exists == true {
+
 		return c.DesDoc[docName]
 	} else {
-		c.DesDoc[docName] = couchdb.NewDesignDoc(docName, c.DbObj)
+
+		err, doc := couchdb.RetreiveDocFromDb(docName, c.DbObj)
+		fmt.Println("Checking if document with name ", docName, " is present.")
+		if err != nil {
+			c.DesDoc[docName] = couchdb.NewDesignDoc(docName, c.DbObj)
+		} else {
+			c.DesDoc[docName] = doc
+		}
 		return c.DesDoc[docName]
 	}
 }
@@ -95,10 +108,28 @@ func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
 	return
 }
 
+// {"id":"bb0c3212953bdc7fad2ade66160c244d","key":"bb0c3212953bdc7fad2ade66160c244d","value":{"name":"abcd","surprise":"1234","field1":"field1","age":0,"id":""}}
+// An example of json that could come up.
+// Decodes a key : value type to a the registered object and returns it.
 func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject) {
 
+	jsonStream := strings.NewReader(string(jsonObj))
+	jsonDecoder := json.NewDecoder(jsonStream)
+
+	type Object struct {
+		Id    string          `json:"id"`
+		Key   string          `json:"key"`
+		Value json.RawMessage `json:"value"`
+	}
+
+	tempObj := new(Object)
+	err := jsonDecoder.Decode(tempObj)
+	if err != nil {
+		return err, nil
+	}
+
 	dynmaicObj := reflect.New(c.ObjType).Interface()
-	err := json.Unmarshal(jsonObj, dynmaicObj)
+	err = json.Unmarshal(tempObj.Value, dynmaicObj)
 	if err != nil {
 		return err, nil
 	}
@@ -109,13 +140,22 @@ func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject)
 
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
+	fmt.Println("ReadOne : Key = ", key)
 	doc := couchdb.NewDocument(key, "", c.DbObj)
 	jsonObj, err := doc.GetDocument()
 	if err != nil {
 		return err, nil
 	}
+	fmt.Println("Read one resp :", string(jsonObj))
 
-	err, obj := c.GetStoreObj(jsonObj)
+	//	err, obj := c.GetStoreObj(jsonObj)
+	dynmaicObj := reflect.New(c.ObjType).Interface()
+	err = json.Unmarshal(jsonObj, dynmaicObj)
+	if err != nil {
+		return err, nil
+	}
+
+	obj := dynmaicObj.(caddyshack.StoreObject)
 	obj.SetKey(doc.Id)
 	return err, obj
 }

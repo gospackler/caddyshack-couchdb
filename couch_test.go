@@ -10,11 +10,27 @@ import (
 
 // Create a compatable storeObject
 type TestObj struct {
-	Name   string `json:"name" query:""`
+	Name   string `json:"name"`
 	Value  string `json:"surprise"`
 	Field1 string `json:"field1"`
-	Age    int    `json:"age" query:"age < 20"`
+	Age    int    `json:"age"`
 	Id     string `json:"id"`
+}
+
+type TestObjCond struct {
+	Name   string `json:"name" condition:"name == 'Updated'"`
+	Value  string `json:"surprise" condition:"surprise == -1"`
+	Field1 string `json:"field1"`
+	Age    int    `json:"age"`
+	Id     string `json:"id"`
+}
+
+func (t *TestObjCond) GetKey() string {
+	return t.Id
+}
+
+func (t *TestObjCond) SetKey(id string) {
+	t.Id = id
 }
 
 type RetTestObj struct {
@@ -31,6 +47,12 @@ func (t *TestObj) GetKey() string {
 
 func (t *TestObj) SetKey(id string) {
 	t.Id = id
+}
+
+func (t *TestObj) String() string {
+	return "\n Name " + t.Name +
+		"\n Value " + t.Value +
+		"\n Field1 " + t.Field1
 }
 
 var CouchStoreIns *CouchStore
@@ -77,6 +99,7 @@ func TestCreate(t *testing.T) {
 		Name:   "abcd",
 		Value:  "1234",
 		Field1: "field1",
+		Age:    10,
 	}
 
 	err := Caddy.StoreIns.Create(testObj)
@@ -86,7 +109,10 @@ func TestCreate(t *testing.T) {
 	}
 
 	Key = testObj.GetKey()
-	t.Log("Created Object with key", testObj.GetKey())
+	if Key == "" {
+		t.Error("Error while creating, Key not obtained.")
+	}
+	t.Log("Object Created Key :=", testObj.GetKey())
 }
 
 var RetrObject *RetTestObj
@@ -133,4 +159,56 @@ func TestRead(t *testing.T) {
 	for _, obj := range objects {
 		t.Log(obj.GetKey())
 	}
+}
+
+func TestObjQueryRead(t *testing.T) {
+
+	newTestObj := new(TestObj)
+
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
+	}
+
+	store := NewCouchStore(res, newTestObj)
+	query := NewObjQuery(newTestObj, store, res)
+	err, objs := store.Read(query)
+
+	if err != nil {
+		t.Error("Obj Query failed", err)
+	} else {
+		for _, obj := range objs {
+			testObj := obj.(*TestObj)
+			t.Log(testObj)
+		}
+	}
+	// Obj query type.
+}
+
+func TestObjQueryCondRead(t *testing.T) {
+
+	newTestObj := new(TestObjCond)
+
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
+	}
+
+	store := NewCouchStore(res, newTestObj)
+	query := NewObjQuery(newTestObj, store, res)
+	err, objs := store.Read(query)
+
+	if err != nil {
+		t.Error("Obj Query Condition failed", err)
+	} else {
+		for _, obj := range objs {
+			testObj := obj.(*TestObjCond)
+			t.Log(testObj)
+		}
+	}
+	// Obj query type.
 }
