@@ -212,3 +212,34 @@ func TestObjQueryCondRead(t *testing.T) {
 	}
 	// Obj query type.
 }
+
+func TestObjDoubleQuery(t *testing.T) {
+
+	newTestObj := new(TestObjCond)
+
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
+	}
+
+	store := NewCouchStore(res, newTestObj)
+	query := NewObjQuery(newTestObj, store, res)
+	err, objs := store.Read(query)
+
+	if err != nil {
+		t.Error("Obj Query Condition failed", err)
+	} else {
+		for _, obj := range objs {
+			testObj := obj.(*TestObjCond)
+			t.Log(testObj)
+		}
+	}
+	NewObjQuery(new(TestObjCond), store, res)
+}
+
+// FIXME : Add tests with two object Queries.
+
+// FIXME : Add a way to retrieve an Object if it already exists.
+// FIXME : Add update option
