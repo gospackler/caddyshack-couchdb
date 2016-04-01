@@ -100,17 +100,17 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore, res *resource.Defin
 	if status == false {
 		desDoc.AddView(view)
 		fmt.Println("Added view", desDoc, view)
+		// FIXME: Removing object update for now. Saved by the guard.
+		err := desDoc.SaveDoc()
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		if index < 0 {
 			desDoc.LastView = view
 		} else {
 			desDoc.Views[index] = view
 		}
-	}
-
-	err := desDoc.SaveDoc()
-	if err != nil {
-		panic(err)
 	}
 
 	q.desDoc = desDoc
