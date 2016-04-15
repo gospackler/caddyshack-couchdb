@@ -173,7 +173,7 @@ func TestObjQueryRead(t *testing.T) {
 	}
 
 	store := NewCouchStore(res, newTestObj)
-	query := NewObjQuery(newTestObj, store, res)
+	query := NewObjQuery(newTestObj, store)
 	err, objs := store.Read(query)
 
 	if err != nil {
@@ -199,7 +199,7 @@ func TestObjQueryCondRead(t *testing.T) {
 	}
 
 	store := NewCouchStore(res, newTestObj)
-	query := NewObjQuery(newTestObj, store, res)
+	query := NewObjQuery(newTestObj, store)
 	err, objs := store.Read(query)
 
 	if err != nil {
@@ -225,7 +225,7 @@ func TestObjDoubleQuery(t *testing.T) {
 	}
 
 	store := NewCouchStore(res, newTestObj)
-	query := NewObjQuery(newTestObj, store, res)
+	query := NewObjQuery(newTestObj, store)
 	err, objs := store.Read(query)
 
 	if err != nil {
@@ -236,7 +236,7 @@ func TestObjDoubleQuery(t *testing.T) {
 			t.Log(testObj)
 		}
 	}
-	NewObjQuery(new(TestObjCond), store, res)
+	NewObjQuery(new(TestObjCond), store)
 }
 
 // FIXME : Add tests with two object Queries.

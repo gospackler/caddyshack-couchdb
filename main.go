@@ -19,6 +19,8 @@ type CouchStore struct {
 	DbObj  *couchdb.Database
 	DesDoc map[string]*couchdb.DesignDoc
 
+	Res *resource.Definition
+
 	// Fields for caddyshack follows
 	// This is needed for identifying adpter for caddyshack.
 	StoreName string
@@ -35,6 +37,7 @@ func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c
 		StoreName: "couchdb",
 		ObjType:   reflect.ValueOf(objModel).Elem().Type(),
 		DesDoc:    make(map[string]*couchdb.DesignDoc),
+		Res:       res,
 	}
 
 	dbObj := c.client.DB(res.Name)

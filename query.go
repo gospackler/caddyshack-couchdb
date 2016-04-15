@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/bushwood/caddyshack"
-	"github.com/bushwood/caddyshack/resource"
 	"github.com/bushwood/couchdb"
 )
 
@@ -84,7 +83,7 @@ func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couc
 }
 
 // Use reflection to create the query from the tags.
-func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore, res *resource.Definition) (q *CouchQuery) {
+func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore) (q *CouchQuery) {
 
 	q = new(CouchQuery)
 	prefix := "doc"
@@ -92,7 +91,7 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore, res *resource.Defin
 	viewName := q.getViewName(obj)
 	view := couchdb.NewView(viewName, prefix, q.getCondition(obj, prefix), q.getEmits(obj))
 	//Creates the DesignDoc if it does not exist.
-	desDoc := db.GetDesignDoc(res.DesDoc)
+	desDoc := db.GetDesignDoc(db.Res.DesDoc)
 	index, status := desDoc.CheckExists(viewName)
 
 	fmt.Println("Index, Status", index, status)
