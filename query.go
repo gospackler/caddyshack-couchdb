@@ -1,14 +1,12 @@
 package adapter
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/bushwood/caddyshack"
-	"github.com/bushwood/caddyshack/resource"
 	"github.com/bushwood/couchdb"
 )
 
@@ -84,15 +82,15 @@ func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couc
 }
 
 // Use reflection to create the query from the tags.
-func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore, res *resource.Definition) (q *CouchQuery) {
+func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore) (q *CouchQuery) {
 
 	q = new(CouchQuery)
 	prefix := "doc"
 
-	viewName := q.getViewName(obj)
+	viewName := q.GetViewName(obj)
 	view := couchdb.NewView(viewName, prefix, q.getCondition(obj, prefix), q.getEmits(obj))
 	//Creates the DesignDoc if it does not exist.
-	desDoc := db.GetDesignDoc(res.DesDoc)
+	desDoc := db.GetDesignDoc(db.Res.DesDoc)
 	index, status := desDoc.CheckExists(viewName)
 
 	fmt.Println("Index, Status", index, status)
@@ -128,7 +126,7 @@ func (q *CouchQuery) GetCondition() string {
 	return q.Condition
 }
 
-func (q *CouchQuery) getViewName(obj caddyshack.StoreObject) string {
+func (q *CouchQuery) GetViewName(obj caddyshack.StoreObject) string {
 	structObj := reflect.ValueOf(obj).Elem()
 	typeOfObj := structObj.Type()
 	return strings.ToLower(typeOfObj.Name())
@@ -188,43 +186,16 @@ func (q *CouchQuery) getEmits(obj caddyshack.StoreObject) (emits string) {
 	return
 }
 
-func (q *CouchQuery) MarshalStoreObjects(data []byte) (err error, result []caddyshack.StoreObject) {
-
-	jsonStream := strings.NewReader(string(data))
-	jsonDecoder := json.NewDecoder(jsonStream)
-
-	type ObjInfo struct {
-		NumRows int               `json:"total_rows"`
-		Offset  int               `json:"offset"`
-		Array   []json.RawMessage `json:"rows"`
-	}
-
-	objInfo := new(ObjInfo)
-
-	err = jsonDecoder.Decode(objInfo)
-
-	for _, row := range objInfo.Array {
-		// Does the reflection part
-		err, storeObj := q.Store.GetStoreObj(row)
-		if err != nil {
-			err = errors.New("Marshal Object" + err.Error())
-		}
-		result = append(result, storeObj)
-	}
-
-	return
-}
-
 func (q *CouchQuery) Execute() (error, []caddyshack.StoreObject) {
 	// Currently O(n) w.r.t to views
 
-	err, data := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName)
+	data, err := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName, "")
 	if err != nil {
 		return errors.New("Error retreiving view : " + err.Error()), nil
 	} else {
 		// Print for now create store Object later.
 		// FIXME Handle unmarshalling over here.
-		err, result := q.MarshalStoreObjects(data)
+		result, err := q.Store.MarshalStoreObjects(data)
 		if err != nil {
 			return errors.New("Could not Marshal json" + err.Error()), result
 		}

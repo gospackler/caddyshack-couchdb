@@ -3,7 +3,10 @@ package adapter
 import (
 	"encoding/json"
 
+	"bytes"
+	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
@@ -18,6 +21,8 @@ type CouchStore struct {
 	client *couchdb.Client
 	DbObj  *couchdb.Database
 	DesDoc map[string]*couchdb.DesignDoc
+
+	Res *resource.Definition
 
 	// Fields for caddyshack follows
 	// This is needed for identifying adpter for caddyshack.
@@ -35,6 +40,7 @@ func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c
 		StoreName: "couchdb",
 		ObjType:   reflect.ValueOf(objModel).Elem().Type(),
 		DesDoc:    make(map[string]*couchdb.DesignDoc),
+		Res:       res,
 	}
 
 	dbObj := c.client.DB(res.Name)
@@ -113,7 +119,7 @@ func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
 // Decodes a key : value type to a the registered object and returns it.
 func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject) {
 
-	jsonStream := strings.NewReader(string(jsonObj))
+	jsonStream := bytes.NewBuffer(jsonObj)
 	jsonDecoder := json.NewDecoder(jsonStream)
 
 	type Object struct {
@@ -138,6 +144,33 @@ func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject)
 	return nil, obj
 }
 
+func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.StoreObject, err error) {
+
+	jsonStream := strings.NewReader(string(data))
+	jsonDecoder := json.NewDecoder(jsonStream)
+
+	type ObjInfo struct {
+		NumRows int               `json:"total_rows"`
+		Offset  int               `json:"offset"`
+		Array   []json.RawMessage `json:"rows"`
+	}
+
+	objInfo := new(ObjInfo)
+
+	err = jsonDecoder.Decode(objInfo)
+
+	for _, row := range objInfo.Array {
+		// Does the reflection part
+		err, storeObj := c.GetStoreObj(row)
+		if err != nil {
+			err = errors.New("Marshal Object" + err.Error())
+		}
+		result = append(result, storeObj)
+	}
+
+	return
+}
+
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
 	fmt.Println("ReadOne : Key = ", key)
@@ -158,6 +191,31 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 	obj := dynmaicObj.(caddyshack.StoreObject)
 	obj.SetKey(doc.Id)
 	return err, obj
+}
+
+func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key string) (caddyshack.StoreObject, error) {
+
+	if !strings.Contains(desDocName, "/") {
+		desDocName = "_design/" + desDocName
+	}
+	log.Print("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
+	data, err := c.DbObj.GetView(desDocName, viewName, key)
+
+	if err != nil {
+		newErr := fmt.Errorf("Error retreiving : Key = %s ViewName = %s desDoc = %s :  %s", key, viewName, desDocName, err.Error())
+		return nil, newErr
+	} else {
+		// Print for now create store Object later.
+		// FIXME Handle unmarshalling over here.
+		result, err := c.MarshalStoreObjects(data)
+		if err != nil {
+			return nil, errors.New("Could not Marshal json" + err.Error())
+		}
+		if len(result) < 1 {
+			return nil, errors.New("caddyshack-couchdb : Key not found in database ")
+		}
+		return result[0], nil
+	}
 }
 
 func (c *CouchStore) Read(query caddyshack.Query) (error, []caddyshack.StoreObject) {
