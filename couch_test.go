@@ -239,6 +239,28 @@ func TestObjDoubleQuery(t *testing.T) {
 	NewObjQuery(new(TestObjCond), store)
 }
 
+func TestGetKeyFromView(t *testing.T) {
+
+	newTestObj := new(TestObjCond)
+	desDocName := "queries"
+
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: desDocName,
+	}
+
+	store := NewCouchStore(res, newTestObj)
+	query := NewObjQuery(newTestObj, store)
+	viewName := query.GetViewName(newTestObj)
+	obj, err := store.ReadOneFromView(desDocName, viewName, Key)
+	if err != nil {
+		t.Error("Error reading one from view", err)
+	}
+	t.Log(obj)
+}
+
 // FIXME : Add tests with two object Queries.
 
 // FIXME : Add a way to retrieve an Object if it already exists.

@@ -3,7 +3,9 @@ package adapter
 import (
 	"encoding/json"
 
+	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
@@ -141,6 +143,33 @@ func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject)
 	return nil, obj
 }
 
+func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.StoreObject, err error) {
+
+	jsonStream := strings.NewReader(string(data))
+	jsonDecoder := json.NewDecoder(jsonStream)
+
+	type ObjInfo struct {
+		NumRows int               `json:"total_rows"`
+		Offset  int               `json:"offset"`
+		Array   []json.RawMessage `json:"rows"`
+	}
+
+	objInfo := new(ObjInfo)
+
+	err = jsonDecoder.Decode(objInfo)
+
+	for _, row := range objInfo.Array {
+		// Does the reflection part
+		err, storeObj := c.GetStoreObj(row)
+		if err != nil {
+			err = errors.New("Marshal Object" + err.Error())
+		}
+		result = append(result, storeObj)
+	}
+
+	return
+}
+
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
 	fmt.Println("ReadOne : Key = ", key)
@@ -161,6 +190,31 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 	obj := dynmaicObj.(caddyshack.StoreObject)
 	obj.SetKey(doc.Id)
 	return err, obj
+}
+
+func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key string) (caddyshack.StoreObject, error) {
+
+	if strings.Contains(desDocName, "/") == false {
+		desDocName = "_design/" + desDocName
+	}
+	log.Print("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
+	data, err := c.DbObj.GetView(desDocName, viewName, key)
+
+	if err != nil {
+		return nil, errors.New("Error retreiving : Key = " + key + " ViewName = " + viewName + " desDoc = " + desDocName + " " + err.Error())
+	} else {
+		// Print for now create store Object later.
+		// FIXME Handle unmarshalling over here.
+		result, err := c.MarshalStoreObjects(data)
+		if err != nil {
+			return nil, errors.New("Could not Marshal json" + err.Error())
+		}
+		if len(result) < 1 {
+			return nil, errors.New("caddyshack-couchdb : Key not found in database ")
+		} else {
+			return result[0], nil
+		}
+	}
 }
 
 func (c *CouchStore) Read(query caddyshack.Query) (error, []caddyshack.StoreObject) {
