@@ -3,6 +3,7 @@ package adapter
 import (
 	"encoding/json"
 
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -118,7 +119,7 @@ func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
 // Decodes a key : value type to a the registered object and returns it.
 func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject) {
 
-	jsonStream := strings.NewReader(string(jsonObj))
+	jsonStream := bytes.NewBuffer(jsonObj)
 	jsonDecoder := json.NewDecoder(jsonStream)
 
 	type Object struct {
@@ -194,14 +195,15 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
 func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key string) (caddyshack.StoreObject, error) {
 
-	if strings.Contains(desDocName, "/") == false {
+	if !strings.Contains(desDocName, "/") {
 		desDocName = "_design/" + desDocName
 	}
 	log.Print("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
 	data, err := c.DbObj.GetView(desDocName, viewName, key)
 
 	if err != nil {
-		return nil, errors.New("Error retreiving : Key = " + key + " ViewName = " + viewName + " desDoc = " + desDocName + " " + err.Error())
+		newErr := fmt.Errorf("Error retreiving : Key = %s ViewName = %s desDoc = %s :  %s", key, viewName, desDocName, err.Error())
+		return nil, newErr
 	} else {
 		// Print for now create store Object later.
 		// FIXME Handle unmarshalling over here.
@@ -211,9 +213,8 @@ func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key str
 		}
 		if len(result) < 1 {
 			return nil, errors.New("caddyshack-couchdb : Key not found in database ")
-		} else {
-			return result[0], nil
 		}
+		return result[0], nil
 	}
 }
 
