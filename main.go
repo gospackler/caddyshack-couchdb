@@ -124,7 +124,7 @@ func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject)
 
 	type Object struct {
 		Id    string          `json:"id"`
-		Key   string          `json:"key"`
+		Key   interface{}     `json:"key"`
 		Value json.RawMessage `json:"value"`
 	}
 
@@ -164,6 +164,7 @@ func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.Store
 		err, storeObj := c.GetStoreObj(row)
 		if err != nil {
 			err = errors.New("Marshal Object" + err.Error())
+			break
 		}
 		result = append(result, storeObj)
 	}
