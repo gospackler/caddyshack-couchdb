@@ -2,10 +2,10 @@ package adapter
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/bushwood/caddyshack"
 	"github.com/bushwood/couchdb"
 )
@@ -60,8 +60,8 @@ func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couc
 
 	index, status := couchQuery.desDoc.CheckExists(viewName)
 
-	fmt.Println("Views -->", couchQuery.desDoc.Views)
-	fmt.Println("LastView -->", couchQuery.desDoc.LastView)
+	log.Debug("Views -->", couchQuery.desDoc.Views)
+	log.Debug("LastView -->", couchQuery.desDoc.LastView)
 	if status == false {
 		couchQuery.desDoc.AddView(newView)
 
@@ -71,7 +71,7 @@ func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couc
 		}
 
 	} else {
-		fmt.Println("Index found at ", index)
+		log.Debug("Index found at ", index)
 		if index < 0 {
 			couchQuery.desDoc.LastView = newView
 		} else {
@@ -93,11 +93,11 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore) (q *CouchQuery) {
 	desDoc := db.GetDesignDoc(db.Res.DesDoc)
 	index, status := desDoc.CheckExists(viewName)
 
-	fmt.Println("Index, Status", index, status)
+	log.Debug("Index, Status", index, status)
 
 	if status == false {
 		desDoc.AddView(view)
-		fmt.Println("Added view", desDoc, view)
+		log.Debug("Added view", desDoc, view)
 		// FIXME: Removing object update for now. Saved by the guard.
 		err := desDoc.SaveDoc()
 		if err != nil {

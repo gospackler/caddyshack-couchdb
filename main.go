@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/bushwood/caddyshack"
 	"github.com/bushwood/caddyshack/model"
 	"github.com/bushwood/caddyshack/resource"
@@ -77,7 +77,7 @@ func (c *CouchStore) GetDesignDoc(docName string) *couchdb.DesignDoc {
 	} else {
 
 		err, doc := couchdb.RetreiveDocFromDb(docName, c.DbObj)
-		fmt.Println("Checking if document with name ", docName, " is present.")
+		log.Info("Checking if document with name ", docName, " is present.")
 		if err != nil {
 			c.DesDoc[docName] = couchdb.NewDesignDoc(docName, c.DbObj)
 		} else {
@@ -174,13 +174,13 @@ func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.Store
 
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 
-	fmt.Println("ReadOne : Key = ", key)
+	log.Info("ReadOne : Key = ", key)
 	doc := couchdb.NewDocument(key, "", c.DbObj)
 	jsonObj, err := doc.GetDocument()
 	if err != nil {
 		return err, nil
 	}
-	fmt.Println("Read one resp :", string(jsonObj))
+	log.Debug("Read one resp :", string(jsonObj))
 
 	//	err, obj := c.GetStoreObj(jsonObj)
 	dynmaicObj := reflect.New(c.ObjType).Interface()
@@ -199,7 +199,7 @@ func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key str
 	if !strings.Contains(desDocName, "/") {
 		desDocName = "_design/" + desDocName
 	}
-	log.Print("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
+	log.Debug("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
 	data, err := c.DbObj.GetView(desDocName, viewName, key)
 
 	if err != nil {
