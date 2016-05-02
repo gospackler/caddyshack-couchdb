@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bushwood/caddyshack"
-	"github.com/bushwood/caddyshack/model"
-	"github.com/bushwood/caddyshack/resource"
-	"github.com/bushwood/couchdb"
+	"github.com/gospackler/caddyshack"
+	"github.com/gospackler/caddyshack/model"
+	"github.com/gospackler/caddyshack/resource"
+	"github.com/gospackler/couchdb"
 )
 
 type CouchStore struct {
