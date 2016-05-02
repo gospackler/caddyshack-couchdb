@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bushwood/caddyshack"
-	"github.com/bushwood/couchdb"
+	"github.com/gospackler/caddyshack"
+	"github.com/gospackler/couchdb"
 )
 
 // View Object is placed over here as a query in couch is possible only with a view

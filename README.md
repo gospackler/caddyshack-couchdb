@@ -2,7 +2,7 @@
 
 This is the couchdb adapter for caddyshack. The caddyshack code and idea can be found here. 
 
-https://github.com/bushwood/caddyshack
+https://github.com/gospackler/caddyshack
 
 ### How it works?
 
