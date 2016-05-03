@@ -239,6 +239,32 @@ func TestObjDoubleQuery(t *testing.T) {
 	NewObjQuery(new(TestObjCond), store)
 }
 
+// Test for the new default method
+func TestDef(t *testing.T) {
+
+	newTestObj := new(TestObjCond)
+
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
+	}
+
+	store := NewCouchStore(res, newTestObj)
+
+	err, objs := store.ReadDef()
+
+	if err != nil {
+		t.Error("Read With Default query failed ", err)
+	} else {
+		for _, obj := range objs {
+			testObj := obj.(*TestObjCond)
+			t.Log(testObj)
+		}
+	}
+}
+
 func TestGetKeyFromView(t *testing.T) {
 
 	newTestObj := new(TestObjCond)

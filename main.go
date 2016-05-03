@@ -28,17 +28,19 @@ type CouchStore struct {
 	// This is needed for identifying adpter for caddyshack.
 	StoreName string
 	// For all queries, receiver for data.
-	ObjType reflect.Type
+	ObjType  reflect.Type
+	DefQuery *CouchQuery
 }
 
 // FIXME : Assert Kind of the objModel passed is a pointer.
 func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c *CouchStore) {
 
+	objType := reflect.ValueOf(objModel).Elem().Type()
 	client := couchdb.NewClient(res.Host, res.Port)
 	c = &CouchStore{
 		client:    &client,
 		StoreName: "couchdb",
-		ObjType:   reflect.ValueOf(objModel).Elem().Type(),
+		ObjType:   objType,
 		DesDoc:    make(map[string]*couchdb.DesignDoc),
 		Res:       res,
 	}
@@ -56,6 +58,7 @@ func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c
 		panic("Could not connect with db " + err.Error())
 	}
 	c.DbObj = &dbObj
+	c.DefQuery = NewObjQuery(objModel, c)
 	return
 }
 
@@ -225,6 +228,16 @@ func (c *CouchStore) Read(query caddyshack.Query) (error, []caddyshack.StoreObje
 	// Use the rawJson to check for the view.
 
 	return err, objects
+}
+
+// Read Default uses the default query object to make the request.
+func (c *CouchStore) ReadDef() (err error, objects []caddyshack.StoreObject) {
+
+	err, objects = c.Read(c.DefQuery)
+	if err != nil {
+		err = errors.New("Read Def :" + err.Error())
+	}
+	return
 }
 
 // The object passed should have CouchWrapperUpdate as an anonymous field containing the details.
