@@ -244,7 +244,9 @@ func (c *CouchStore) ReadDef() (err error, objects []caddyshack.StoreObject) {
 func (c *CouchStore) UpdateOne(obj caddyshack.StoreObject) (err error) {
 
 	// FIXME Actually a hack which works because of the implementation.
-	err = c.Create(obj)
+	byteObj, err := json.Marshal(obj)
+	doc := couchdb.NewDocument(obj.GetKey(), "", c.DbObj)
+	err = doc.Update(byteObj)
 	return
 }
 
