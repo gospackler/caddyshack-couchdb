@@ -57,19 +57,19 @@ func (t *TestObj) String() string {
 
 var CouchStoreIns *CouchStore
 
-func TestInit(t *testing.T) {
-
+func getCouchStore(t *testing.T) *CouchStore {
 	// Add model definition in future to it.
 	cs := caddyshack.New()
 
 	res := &resource.Definition{
-		Host: "127.0.0.1",
-		Port: 5984,
-		Name: "adaptertest",
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
 	}
 
 	// From storedemo.go
-	couchStore := NewCouchStore(res, &RetTestObj{})
+	couchStore := NewCouchStore(res, &TestObj{})
 	err := cs.LoadStore(couchStore)
 
 	if err != nil {
@@ -90,11 +90,26 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Error("Error while retreiving caddy ", err)
 	}
-	CouchStoreIns = couchStore
+	return couchStore
+}
+
+func getStoreCond(t *testing.T) *CouchStore {
+	newTestObj := new(TestObjCond)
+	res := &resource.Definition{
+		Host:   "127.0.0.1",
+		Port:   5984,
+		Name:   "adaptertest",
+		DesDoc: "queries",
+	}
+
+	store := NewCouchStore(res, newTestObj)
+	return store
+}
+func TestInit(t *testing.T) {
+	getCouchStore(t)
 }
 
 func TestCreate(t *testing.T) {
-
 	testObj := &TestObj{
 		Name:   "abcd",
 		Value:  "1234",
@@ -115,10 +130,7 @@ func TestCreate(t *testing.T) {
 	t.Log("Object Created Key :=", testObj.GetKey())
 }
 
-var RetrObject *RetTestObj
-
-func TestReadOne(t *testing.T) {
-
+func TestReadOneAndUpdate(t *testing.T) {
 	err, obj := Caddy.StoreIns.ReadOne(Key)
 	if err != nil {
 		t.Error("Error while retreiving object")
@@ -128,16 +140,12 @@ func TestReadOne(t *testing.T) {
 		t.Error("Retreived wrong object")
 	}
 
-	actualObj := obj.(*RetTestObj)
-	t.Log("Got the actual object back.", actualObj.TestObj)
-	RetrObject = actualObj
-}
+	actualObj := obj.(*TestObj)
+	t.Log("Got the actual object back.", actualObj)
 
-func TestUpdate(t *testing.T) {
-
-	RetrObject.TestObj.Name = "Updated"
-	RetrObject.TestObj.Value = "-1"
-	err := Caddy.StoreIns.UpdateOne(RetrObject)
+	actualObj.Name = "Updated"
+	actualObj.Value = "-1"
+	err = Caddy.StoreIns.UpdateOne(actualObj)
 	if err != nil {
 		t.Log("Error while updating object, ", err)
 	}
@@ -145,11 +153,10 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestRead(t *testing.T) {
-
 	// Every Query is the request to a view.
 
 	//	NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", CouchStoreIns)
-	query := NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", CouchStoreIns)
+	query := NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", getCouchStore(t))
 	err, objects := Caddy.StoreIns.Read(query)
 	if err != nil {
 		t.Error("Error while reading query ", query, " ", err)
@@ -162,18 +169,8 @@ func TestRead(t *testing.T) {
 }
 
 func TestObjQueryRead(t *testing.T) {
-
-	newTestObj := new(TestObj)
-
-	res := &resource.Definition{
-		Host:   "127.0.0.1",
-		Port:   5984,
-		Name:   "adaptertest",
-		DesDoc: "queries",
-	}
-
-	store := NewCouchStore(res, newTestObj)
-	query := NewObjQuery(newTestObj, store)
+	store := getCouchStore(t)
+	query := NewObjQuery(new(TestObj), store)
 	err, objs := store.Read(query)
 
 	if err != nil {
@@ -188,18 +185,8 @@ func TestObjQueryRead(t *testing.T) {
 }
 
 func TestObjQueryCondRead(t *testing.T) {
-
-	newTestObj := new(TestObjCond)
-
-	res := &resource.Definition{
-		Host:   "127.0.0.1",
-		Port:   5984,
-		Name:   "adaptertest",
-		DesDoc: "queries",
-	}
-
-	store := NewCouchStore(res, newTestObj)
-	query := NewObjQuery(newTestObj, store)
+	store := getStoreCond(t)
+	query := NewObjQuery(new(TestObjCond), store)
 	err, objs := store.Read(query)
 
 	if err != nil {
@@ -214,18 +201,8 @@ func TestObjQueryCondRead(t *testing.T) {
 }
 
 func TestObjDoubleQuery(t *testing.T) {
-
-	newTestObj := new(TestObjCond)
-
-	res := &resource.Definition{
-		Host:   "127.0.0.1",
-		Port:   5984,
-		Name:   "adaptertest",
-		DesDoc: "queries",
-	}
-
-	store := NewCouchStore(res, newTestObj)
-	query := NewObjQuery(newTestObj, store)
+	store := getStoreCond(t)
+	query := NewObjQuery(new(TestObjCond), store)
 	err, objs := store.Read(query)
 
 	if err != nil {
@@ -241,18 +218,7 @@ func TestObjDoubleQuery(t *testing.T) {
 
 // Test for the new default method
 func TestDef(t *testing.T) {
-
-	newTestObj := new(TestObjCond)
-
-	res := &resource.Definition{
-		Host:   "127.0.0.1",
-		Port:   5984,
-		Name:   "adaptertest",
-		DesDoc: "queries",
-	}
-
-	store := NewCouchStore(res, newTestObj)
-
+	store := getStoreCond(t)
 	err, objs := store.ReadDef()
 
 	if err != nil {
@@ -266,25 +232,33 @@ func TestDef(t *testing.T) {
 }
 
 func TestGetKeyFromView(t *testing.T) {
-
+	store := getStoreCond(t)
 	newTestObj := new(TestObjCond)
-	desDocName := "queries"
-
-	res := &resource.Definition{
-		Host:   "127.0.0.1",
-		Port:   5984,
-		Name:   "adaptertest",
-		DesDoc: desDocName,
-	}
-
-	store := NewCouchStore(res, newTestObj)
 	query := NewObjQuery(newTestObj, store)
 	viewName := query.GetViewName(newTestObj)
+	desDocName := "queries"
 	obj, err := store.ReadOneFromView(desDocName, viewName, Key)
 	if err != nil {
 		t.Error("Error reading one from view", err)
 	}
 	t.Log(obj)
+}
+
+func TestDelete(t *testing.T) {
+	newTestObj := new(TestObjCond)
+	store := getStoreCond(t)
+	query := NewObjQuery(newTestObj, store)
+	viewName := query.GetViewName(newTestObj)
+	desDocName := "queries"
+	obj, err := store.ReadOneFromView(desDocName, viewName, Key)
+	if err != nil {
+		t.Error("Error reading one from view", err)
+	}
+	err = store.DeleteOne(obj)
+	if err != nil {
+		t.Error("Error reading one from view", err)
+	}
+	t.Log("Successfully deleted object with name ", Key)
 }
 
 // FIXME : Add tests with two object Queries.

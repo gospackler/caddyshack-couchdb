@@ -34,7 +34,6 @@ type CouchStore struct {
 
 // FIXME : Assert Kind of the objModel passed is a pointer.
 func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c *CouchStore) {
-
 	objType := reflect.ValueOf(objModel).Elem().Type()
 	client := couchdb.NewClient(res.Host, res.Port)
 	c = &CouchStore{
@@ -55,7 +54,7 @@ func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c
 			}
 		}
 	} else {
-		panic("Could not connect with db " + err.Error())
+		panic("Could not connect with db " + res.Host + string(res.Port) + err.Error())
 	}
 	c.DbObj = &dbObj
 	c.DefQuery = NewObjQuery(objModel, c)
@@ -69,7 +68,6 @@ func (c *CouchStore) Init(model *model.Definition) (error, caddyshack.Store) {
 }
 
 func (c *CouchStore) GetDesignDoc(docName string) *couchdb.DesignDoc {
-
 	_, exists := c.DesDoc[docName] //Checking if the view exists.
 
 	// FIXME check in the db as well to make sure the document does not exist there.
@@ -91,12 +89,10 @@ func (c *CouchStore) GetDesignDoc(docName string) *couchdb.DesignDoc {
 }
 
 func (c *CouchStore) GetName() string {
-
 	return c.StoreName
 }
 
 func (c *CouchStore) SetName(name string) error {
-
 	c.StoreName = name
 	return nil
 }
@@ -108,7 +104,6 @@ func (c *CouchStore) verify(obj caddyshack.StoreObject) {
 }
 
 func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
-
 	strObj, err := json.Marshal(obj)
 
 	doc := couchdb.NewDocument("", "", c.DbObj)
@@ -121,7 +116,6 @@ func (c *CouchStore) Create(obj caddyshack.StoreObject) (err error) {
 // An example of json that could come up.
 // Decodes a key : value type to a the registered object and returns it.
 func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject) {
-
 	jsonStream := bytes.NewBuffer(jsonObj)
 	jsonDecoder := json.NewDecoder(jsonStream)
 
@@ -148,7 +142,6 @@ func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject)
 }
 
 func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.StoreObject, err error) {
-
 	jsonStream := strings.NewReader(string(data))
 	jsonDecoder := json.NewDecoder(jsonStream)
 
@@ -176,7 +169,6 @@ func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.Store
 }
 
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
-
 	log.Info("ReadOne : Key = ", key)
 	doc := couchdb.NewDocument(key, "", c.DbObj)
 	jsonObj, err := doc.GetDocument()
@@ -197,8 +189,24 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 	return err, obj
 }
 
-func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key string) (caddyshack.StoreObject, error) {
+func (c *CouchStore) DeleteOne(obj caddyshack.StoreObject) error {
+	doc := couchdb.NewDocument(obj.GetKey(), "", c.DbObj)
+	_, err := doc.GetDocument()
+	if err != nil {
+		return err
+	}
+	return doc.Delete()
+}
 
+func (c *CouchStore) DestroyOne(key string) error {
+	err, obj := c.ReadOne(key)
+	if err != nil {
+		return err
+	}
+	return c.DeleteOne(obj)
+}
+
+func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key string) (caddyshack.StoreObject, error) {
 	if !strings.Contains(desDocName, "/") {
 		desDocName = "_design/" + desDocName
 	}
@@ -223,7 +231,6 @@ func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key str
 }
 
 func (c *CouchStore) Read(query caddyshack.Query) (error, []caddyshack.StoreObject) {
-
 	err, objects := query.Execute()
 	// Use the rawJson to check for the view.
 
@@ -242,15 +249,8 @@ func (c *CouchStore) ReadDef() (err error, objects []caddyshack.StoreObject) {
 
 // The object passed should have CouchWrapperUpdate as an anonymous field containing the details.
 func (c *CouchStore) UpdateOne(obj caddyshack.StoreObject) (err error) {
-
-	// FIXME Actually a hack which works because of the implementation.
 	byteObj, err := json.Marshal(obj)
 	doc := couchdb.NewDocument(obj.GetKey(), "", c.DbObj)
 	err = doc.Update(byteObj)
 	return
-}
-
-func (c *CouchStore) DestroyOne(key string) error {
-	// Destroy not yet implemented need to implement it in the lower level. Missed it!
-	return nil
 }
