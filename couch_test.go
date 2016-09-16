@@ -154,9 +154,21 @@ func TestReadOneAndUpdate(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	// Every Query is the request to a view.
-
-	//	NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", CouchStoreIns)
 	query := NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", getCouchStore(t))
+	err, objects := Caddy.StoreIns.Read(query)
+	if err != nil {
+		t.Error("Error while reading query ", query, " ", err)
+	} else {
+		t.Log("Read", objects)
+	}
+	for _, obj := range objects {
+		t.Log(obj.GetKey())
+	}
+}
+
+func TestReadCustomMR(t *testing.T) {
+	mapR := "\"map\": \"function(doc) {emit(doc.field1);}\", \"reduce\" : \"function(keys, values) {console.log('reduce');}\""
+	query := NewMRQuery(mapR, "new_view_reduce", "new_design", getCouchStore(t))
 	err, objects := Caddy.StoreIns.Read(query)
 	if err != nil {
 		t.Error("Error while reading query ", query, " ", err)

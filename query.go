@@ -42,20 +42,27 @@ type CouchQuery struct {
 }
 
 func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
-
 	// Assuming a design doc is already created.
+	line = "\"map\" : \"" + line + "\""
+	return createCouchQuery(line, viewName, desDoc, db)
+}
+
+func NewMRQuery(mrCode string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
+	return createCouchQuery(mrCode, viewName, desDoc, db)
+}
+
+func createCouchQuery(rawCond string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
 	desDocObj := db.GetDesignDoc(desDoc)
 
 	couchQuery = &CouchQuery{
 		desDoc:    desDocObj,
-		Condition: line,
+		Condition: rawCond,
 		ViewName:  viewName,
 		Store:     db,
 	}
 
 	// Correct the code over here.
 	newView := &couchdb.View{Name: viewName}
-	newView.RawStatus = true
 	newView.RawJson = couchQuery.Condition
 
 	index, status := couchQuery.desDoc.CheckExists(viewName)
