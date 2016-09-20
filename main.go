@@ -211,7 +211,7 @@ func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key str
 		desDocName = "_design/" + desDocName
 	}
 	log.Debug("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
-	data, err := c.DbObj.GetView(desDocName, viewName, key)
+	data, err := c.DbObj.GetView(desDocName, viewName, "key=\""+key+"\"")
 
 	if err != nil {
 		newErr := fmt.Errorf("Error retreiving : Key = %s ViewName = %s desDoc = %s :  %s", key, viewName, desDocName, err.Error())
