@@ -39,19 +39,20 @@ type CouchQuery struct {
 	ViewName  string
 	Store     *CouchStore
 	desDoc    *couchdb.DesignDoc
+	Params    string
 }
 
 func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
 	// Assuming a design doc is already created.
 	line = "\"map\" : \"" + line + "\""
-	return createCouchQuery(line, viewName, desDoc, db)
+	return createCouchQuery(line, viewName, desDoc, db, "")
 }
 
-func NewMRQuery(mrCode string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
-	return createCouchQuery(mrCode, viewName, desDoc, db)
+func NewMRQuery(mrCode string, viewName string, desDoc string, db *CouchStore, params string) (couchQuery *CouchQuery) {
+	return createCouchQuery(mrCode, viewName, desDoc, db, params)
 }
 
-func createCouchQuery(rawCond string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
+func createCouchQuery(rawCond string, viewName string, desDoc string, db *CouchStore, params string) (couchQuery *CouchQuery) {
 	desDocObj := db.GetDesignDoc(desDoc)
 
 	couchQuery = &CouchQuery{
@@ -59,6 +60,7 @@ func createCouchQuery(rawCond string, viewName string, desDoc string, db *CouchS
 		Condition: rawCond,
 		ViewName:  viewName,
 		Store:     db,
+		Params:    params,
 	}
 
 	// Correct the code over here.
@@ -196,7 +198,7 @@ func (q *CouchQuery) getEmits(obj caddyshack.StoreObject) (emits string) {
 func (q *CouchQuery) Execute() (error, []caddyshack.StoreObject) {
 	// Currently O(n) w.r.t to views
 
-	data, err := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName, "")
+	data, err := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName, q.Params)
 	if err != nil {
 		return errors.New("Error retreiving view : " + err.Error()), nil
 	} else {

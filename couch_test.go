@@ -168,7 +168,7 @@ func TestRead(t *testing.T) {
 
 func TestReadCustomMR(t *testing.T) {
 	mapR := "\"map\": \"function(doc) {emit(doc.field1);}\", \"reduce\" : \"function(keys, values) {console.log('reduce');}\""
-	query := NewMRQuery(mapR, "new_view_reduce", "new_design", getCouchStore(t))
+	query := NewMRQuery(mapR, "new_view_reduce", "new_design", getCouchStore(t), "")
 	err, objects := Caddy.StoreIns.Read(query)
 	if err != nil {
 		t.Error("Error while reading query ", query, " ", err)
