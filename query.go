@@ -48,6 +48,12 @@ func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couc
 	return createCouchQuery(line, viewName, desDoc, db, "")
 }
 
+func NewFilterQuery(line string, viewName string, desDoc string, db *CouchStore, params string) (couchQuery *CouchQuery) {
+	// Assuming a design doc is already created.
+	line = "\"map\" : \"" + line + "\""
+	return createCouchQuery(line, viewName, desDoc, db, params)
+}
+
 func NewMRQuery(mrCode string, viewName string, desDoc string, db *CouchStore, params string) (couchQuery *CouchQuery) {
 	return createCouchQuery(mrCode, viewName, desDoc, db, params)
 }
