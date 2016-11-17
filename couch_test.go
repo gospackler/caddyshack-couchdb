@@ -1,11 +1,13 @@
 package adapter
 
 import (
+	"io"
+	"testing"
+
 	"github.com/gospackler/caddyshack"
 	"github.com/gospackler/caddyshack/model"
 	"github.com/gospackler/caddyshack/resource"
 	"github.com/gospackler/couchdb"
-	"testing"
 )
 
 // Create a compatable storeObject
@@ -160,6 +162,23 @@ func TestRead(t *testing.T) {
 		t.Error("Error while reading query ", query, " ", err)
 	} else {
 		t.Log("Read", objects)
+	}
+	for _, obj := range objects {
+		t.Log(obj.GetKey())
+	}
+}
+
+func TestReadN(t *testing.T) {
+	// Every Query is the request to a view.
+	couchStore := getCouchStore(t)
+	query := NewQuery("function(doc) {emit(doc.field1);}", "new_view", "new_design", couchStore)
+	objects, err := couchStore.ReadN(query)
+	if err != nil {
+		if err == io.EOF {
+			t.Log("EOF Reached Read ", objects)
+		} else {
+			t.Error("Error while reading query ", query, " ", err, couchStore)
+		}
 	}
 	for _, obj := range objects {
 		t.Log(obj.GetKey())

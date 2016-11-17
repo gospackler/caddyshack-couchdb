@@ -1,11 +1,11 @@
 package adapter
 
 import (
-	"encoding/json"
-
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 
@@ -22,14 +22,18 @@ type CouchStore struct {
 	DbObj  *couchdb.Database
 	DesDoc map[string]*couchdb.DesignDoc
 
+	N   int
 	Res *resource.Definition
 
 	// Fields for caddyshack follows
 	// This is needed for identifying adpter for caddyshack.
 	StoreName string
 	// For all queries, receiver for data.
-	ObjType  reflect.Type
-	DefQuery *CouchQuery
+	ObjType    reflect.Type
+	DefQuery   *CouchQuery
+	Skip       int
+	Limit      int
+	BufferSize int
 }
 
 // FIXME : Assert Kind of the objModel passed is a pointer.
@@ -37,11 +41,12 @@ func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c
 	objType := reflect.ValueOf(objModel).Elem().Type()
 	client := couchdb.NewClient(res.Host, res.Port)
 	c = &CouchStore{
-		client:    &client,
-		StoreName: "couchdb",
-		ObjType:   objType,
-		DesDoc:    make(map[string]*couchdb.DesignDoc),
-		Res:       res,
+		client:     &client,
+		StoreName:  "couchdb",
+		ObjType:    objType,
+		DesDoc:     make(map[string]*couchdb.DesignDoc),
+		Res:        res,
+		BufferSize: 500,
 	}
 
 	dbObj := c.client.DB(res.Name)
@@ -239,12 +244,39 @@ func (c *CouchStore) Read(query caddyshack.Query) (error, []caddyshack.StoreObje
 
 // Read Default uses the default query object to make the request.
 func (c *CouchStore) ReadDef() (err error, objects []caddyshack.StoreObject) {
-
 	err, objects = c.Read(c.DefQuery)
 	if err != nil {
 		err = errors.New("Read Def :" + err.Error())
 	}
 	return
+}
+
+func (c *CouchStore) ReadN(query *CouchQuery) (objs []caddyshack.StoreObject, err error) {
+	if c.BufferSize == 0 {
+		return nil, errors.New("BufferSize is 0 for readN which is invalid")
+	}
+
+	if query.Skip != 0 && query.Limit != 0 {
+		c.Skip = 0
+		c.Limit = c.BufferSize
+	} else {
+		c.Skip = c.Limit
+		c.Limit = c.Limit + c.BufferSize
+	}
+
+	query.Skip = c.Skip
+	query.Limit = c.Limit
+	err, objs = c.Read(query)
+
+	if len(objs) < c.BufferSize {
+		// FIXME : Possible lose of error information.
+		err = io.EOF
+		query.Skip = 0
+		query.Limit = 0
+		c.Skip = 0
+		c.Limit = 0
+	}
+	return objs, err
 }
 
 // The object passed should have CouchWrapperUpdate as an anonymous field containing the details.

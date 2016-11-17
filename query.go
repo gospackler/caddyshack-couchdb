@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -40,6 +41,8 @@ type CouchQuery struct {
 	Store     *CouchStore
 	desDoc    *couchdb.DesignDoc
 	Params    string
+	Skip      int
+	Limit     int
 }
 
 func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
@@ -98,7 +101,6 @@ func createCouchQuery(rawCond string, viewName string, desDoc string, db *CouchS
 
 // Use reflection to create the query from the tags.
 func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore) (q *CouchQuery) {
-
 	q = new(CouchQuery)
 	prefix := "doc"
 
@@ -148,7 +150,6 @@ func (q *CouchQuery) GetViewName(obj caddyshack.StoreObject) string {
 }
 
 func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) (condStr string) {
-
 	structObj := reflect.ValueOf(obj).Elem()
 	typeOfObj := structObj.Type()
 
@@ -175,7 +176,6 @@ func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) (co
 }
 
 func (q *CouchQuery) getEmits(obj caddyshack.StoreObject) (emits string) {
-
 	structObj := reflect.ValueOf(obj).Elem()
 	typeOfObj := structObj.Type()
 
@@ -203,8 +203,13 @@ func (q *CouchQuery) getEmits(obj caddyshack.StoreObject) (emits string) {
 
 func (q *CouchQuery) Execute() (error, []caddyshack.StoreObject) {
 	// Currently O(n) w.r.t to views
+	var extraParams string
+	if q.Skip != 0 && q.Limit != 0 {
+		extraParams = fmt.Sprintf("&limit=%d&skip=%d", q.Skip, q.Limit)
+	}
 
-	data, err := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName, q.Params)
+	params := q.Params + extraParams
+	data, err := q.desDoc.Db.GetView(q.desDoc.Id, q.ViewName, params)
 	if err != nil {
 		return errors.New("Error retreiving view : " + err.Error()), nil
 	} else {
@@ -217,7 +222,7 @@ func (q *CouchQuery) Execute() (error, []caddyshack.StoreObject) {
 		return nil, result
 	}
 
-	// Move this section to the New
+	// Move this section to New
 	// The intutive version would be creating an object and then adding methods to it.
 
 	// If it exists get the view back.
