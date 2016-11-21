@@ -46,7 +46,7 @@ func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c
 		ObjType:    objType,
 		DesDoc:     make(map[string]*couchdb.DesignDoc),
 		Res:        res,
-		BufferSize: 500,
+		BufferSize: 50,
 	}
 
 	dbObj := c.client.DB(res.Name)
@@ -83,7 +83,7 @@ func (c *CouchStore) GetDesignDoc(docName string) *couchdb.DesignDoc {
 	} else {
 
 		err, doc := couchdb.RetreiveDocFromDb(docName, c.DbObj)
-		log.Info("Checking if document with name ", docName, " is present.")
+		log.Debug("Checking if document with name ", docName, " is present.")
 		if err != nil {
 			c.DesDoc[docName] = couchdb.NewDesignDoc(docName, c.DbObj)
 		} else {
@@ -174,7 +174,7 @@ func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.Store
 }
 
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
-	log.Info("ReadOne : Key = ", key)
+	log.Debug("ReadOne : Key = ", key)
 	doc := couchdb.NewDocument(key, "", c.DbObj)
 	jsonObj, err := doc.GetDocument()
 	if err != nil {
@@ -256,16 +256,13 @@ func (c *CouchStore) ReadN(query *CouchQuery) (objs []caddyshack.StoreObject, er
 		return nil, errors.New("BufferSize is 0 for readN which is invalid")
 	}
 
-	if query.Skip != 0 && query.Limit != 0 {
-		c.Skip = 0
-		c.Limit = c.BufferSize
+	if query.Skip == 0 && query.Limit == 0 {
+		query.Skip = 0
+		query.Limit = c.BufferSize
 	} else {
-		c.Skip = c.Limit
-		c.Limit = c.Limit + c.BufferSize
+		query.Skip = query.Skip + c.BufferSize
 	}
 
-	query.Skip = c.Skip
-	query.Limit = c.Limit
 	err, objs = c.Read(query)
 
 	if len(objs) < c.BufferSize {
@@ -273,9 +270,10 @@ func (c *CouchStore) ReadN(query *CouchQuery) (objs []caddyshack.StoreObject, er
 		err = io.EOF
 		query.Skip = 0
 		query.Limit = 0
-		c.Skip = 0
-		c.Limit = 0
 	}
+	log.Debug("Query =", query)
+	log.Debug("Objects count read =", len(objs))
+	log.Debug("Error = ", err)
 	return objs, err
 }
 

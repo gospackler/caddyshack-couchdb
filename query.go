@@ -204,8 +204,8 @@ func (q *CouchQuery) getEmits(obj caddyshack.StoreObject) (emits string) {
 func (q *CouchQuery) Execute() (error, []caddyshack.StoreObject) {
 	// Currently O(n) w.r.t to views
 	var extraParams string
-	if q.Skip != 0 && q.Limit != 0 {
-		extraParams = fmt.Sprintf("&limit=%d&skip=%d", q.Skip, q.Limit)
+	if q.Limit != 0 {
+		extraParams = fmt.Sprintf("&limit=%d&skip=%d", q.Limit, q.Skip)
 	}
 
 	params := q.Params + extraParams
