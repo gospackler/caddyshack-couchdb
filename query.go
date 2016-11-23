@@ -11,6 +11,10 @@ import (
 	"github.com/gospackler/couchdb"
 )
 
+const (
+	defaultBufferSize = 50
+)
+
 // View Object is placed over here as a query in couch is possible only with a view
 // Helps in forming the javascript that can be used for working on stuff.
 type ViewObj struct {
@@ -71,7 +75,7 @@ func createCouchQuery(rawCond string, viewName string, desDoc string, db *CouchS
 		ViewName:   viewName,
 		Store:      db,
 		Params:     params,
-		BufferSize: 50,
+		BufferSize: defaultBufferSize,
 	}
 
 	// Correct the code over here.
@@ -133,6 +137,7 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore) (q *CouchQuery) {
 	q.desDoc = desDoc
 	q.ViewName = viewName
 	q.Store = db
+	q.BufferSize = defaultBufferSize
 
 	return
 }
