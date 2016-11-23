@@ -29,11 +29,8 @@ type CouchStore struct {
 	// This is needed for identifying adpter for caddyshack.
 	StoreName string
 	// For all queries, receiver for data.
-	ObjType    reflect.Type
-	DefQuery   *CouchQuery
-	Skip       int
-	Limit      int
-	BufferSize int
+	ObjType  reflect.Type
+	DefQuery *CouchQuery
 }
 
 // FIXME : Assert Kind of the objModel passed is a pointer.
@@ -41,12 +38,11 @@ func NewCouchStore(res *resource.Definition, objModel caddyshack.StoreObject) (c
 	objType := reflect.ValueOf(objModel).Elem().Type()
 	client := couchdb.NewClient(res.Host, res.Port)
 	c = &CouchStore{
-		client:     &client,
-		StoreName:  "couchdb",
-		ObjType:    objType,
-		DesDoc:     make(map[string]*couchdb.DesignDoc),
-		Res:        res,
-		BufferSize: 50,
+		client:    &client,
+		StoreName: "couchdb",
+		ObjType:   objType,
+		DesDoc:    make(map[string]*couchdb.DesignDoc),
+		Res:       res,
 	}
 
 	dbObj := c.client.DB(res.Name)
@@ -252,20 +248,20 @@ func (c *CouchStore) ReadDef() (err error, objects []caddyshack.StoreObject) {
 }
 
 func (c *CouchStore) ReadN(query *CouchQuery) (objs []caddyshack.StoreObject, err error) {
-	if c.BufferSize == 0 {
-		return nil, errors.New("BufferSize is 0 for readN which is invalid")
+	if query.BufferSize == 0 {
+		return nil, errors.New("BufferSize is 0 in query for readN which is invalid")
 	}
 
 	if query.Skip == 0 && query.Limit == 0 {
 		query.Skip = 0
-		query.Limit = c.BufferSize
+		query.Limit = query.BufferSize
 	} else {
-		query.Skip = query.Skip + c.BufferSize
+		query.Skip = query.Skip + query.BufferSize
 	}
 
 	err, objs = c.Read(query)
 
-	if len(objs) < c.BufferSize {
+	if len(objs) < query.BufferSize {
 		// FIXME : Possible lose of error information.
 		err = io.EOF
 		query.Skip = 0

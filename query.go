@@ -36,13 +36,14 @@ func (v *ViewObj) GetCondition() string {
 
 // Initial Version
 type CouchQuery struct {
-	Condition string // Code for the view RawJson
-	ViewName  string
-	Store     *CouchStore
-	desDoc    *couchdb.DesignDoc
-	Params    string
-	Skip      int
-	Limit     int
+	Condition  string // Code for the view RawJson
+	ViewName   string
+	Store      *CouchStore
+	desDoc     *couchdb.DesignDoc
+	Params     string
+	Skip       int
+	Limit      int
+	BufferSize int
 }
 
 func NewQuery(line string, viewName string, desDoc string, db *CouchStore) (couchQuery *CouchQuery) {
@@ -65,11 +66,12 @@ func createCouchQuery(rawCond string, viewName string, desDoc string, db *CouchS
 	desDocObj := db.GetDesignDoc(desDoc)
 
 	couchQuery = &CouchQuery{
-		desDoc:    desDocObj,
-		Condition: rawCond,
-		ViewName:  viewName,
-		Store:     db,
-		Params:    params,
+		desDoc:     desDocObj,
+		Condition:  rawCond,
+		ViewName:   viewName,
+		Store:      db,
+		Params:     params,
+		BufferSize: 50,
 	}
 
 	// Correct the code over here.
