@@ -261,7 +261,7 @@ func (c *CouchStore) ReadN(query *CouchQuery) (objs []caddyshack.StoreObject, er
 
 	err, objs = c.Read(query)
 
-	if len(objs) < query.BufferSize {
+	if len(objs) == 0 {
 		// FIXME : Possible lose of error information.
 		err = io.EOF
 		query.Skip = 0
