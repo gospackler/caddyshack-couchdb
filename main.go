@@ -169,14 +169,20 @@ func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.Store
 	return
 }
 
+func (c *CouchStore) ReadOneFromObj(obj caddyshack.StoreObject) (caddyshack.StoreObject, error) {
+	key := obj.GetKey()
+	log.Info(c.Res.DesDoc, c.DefQuery.ViewName, key)
+	return c.ReadOneFromView(c.Res.DesDoc, c.DefQuery.ViewName, key)
+}
+
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
-	log.Debug("ReadOne : Key = ", key)
+	log.Info("ReadOne : Key = ", key)
 	doc := couchdb.NewDocument(key, "", c.DbObj)
 	jsonObj, err := doc.GetDocument()
 	if err != nil {
 		return err, nil
 	}
-	log.Debug("Read one resp :", string(jsonObj))
+	log.Info("Read one resp :", string(jsonObj))
 
 	//	err, obj := c.GetStoreObj(jsonObj)
 	dynmaicObj := reflect.New(c.ObjType).Interface()

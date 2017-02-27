@@ -110,8 +110,13 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore) (q *CouchQuery) {
 	q = new(CouchQuery)
 	prefix := "doc"
 
+	// FIXME : This should change based on if condition is there.
 	viewName := q.GetViewName(obj)
 	view := couchdb.NewView(viewName, prefix, q.getCondition(obj, prefix), q.getEmits(obj))
+	keyName := q.getByName(obj, prefix)
+	if keyName != "" {
+		view.KeyName = keyName
+	}
 	//Creates the DesignDoc if it does not exist.
 	desDoc := db.GetDesignDoc(db.Res.DesDoc)
 	index, status := desDoc.CheckExists(viewName)
@@ -179,6 +184,30 @@ func (q *CouchQuery) getCondition(obj caddyshack.StoreObject, prefix string) (co
 		panic(errors.New("Expected a struct pointer as input."))
 	}
 
+	return
+}
+func (q *CouchQuery) getByName(obj caddyshack.StoreObject, prefix string) (byStr string) {
+	structObj := reflect.ValueOf(obj).Elem()
+	typeOfObj := structObj.Type()
+
+	firstCond := true
+
+	if structObj.Kind() == reflect.Struct {
+		for index := 0; index < typeOfObj.NumField(); index++ {
+			structField := typeOfObj.Field(index)
+			byName := structField.Tag.Get("by")
+			if byName != "" {
+				if firstCond {
+					byStr = byStr + prefix + "." + byName
+					firstCond = false
+				} else {
+					byStr = byStr + " + \\\",\\\" + " + prefix + "." + byName
+				}
+			}
+		}
+	} else {
+		panic(errors.New("Expected a struct pointer as input."))
+	}
 	return
 }
 

@@ -262,6 +262,7 @@ func TestDef(t *testing.T) {
 	}
 }
 
+/*
 func TestGetKeyFromView(t *testing.T) {
 	store := getStoreCond(t)
 	newTestObj := new(TestObjCond)
@@ -274,7 +275,9 @@ func TestGetKeyFromView(t *testing.T) {
 	}
 	t.Log(obj)
 }
+*/
 
+/*
 func TestDelete(t *testing.T) {
 	newTestObj := new(TestObjCond)
 	store := getStoreCond(t)
@@ -291,8 +294,4 @@ func TestDelete(t *testing.T) {
 	}
 	t.Log("Successfully deleted object with name ", Key)
 }
-
-// FIXME : Add tests with two object Queries.
-
-// FIXME : Add a way to retrieve an Object if it already exists.
-// FIXME : Add update option
+*/
