@@ -176,24 +176,30 @@ func (c *CouchStore) ReadOneFromObj(obj caddyshack.StoreObject) (caddyshack.Stor
 }
 
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
-	log.Info("ReadOne : Key = ", key)
-	doc := couchdb.NewDocument(key, "", c.DbObj)
-	jsonObj, err := doc.GetDocument()
-	if err != nil {
-		return err, nil
-	}
-	log.Info("Read one resp :", string(jsonObj))
+	dynmaicObj := reflect.New(c.ObjType).Interface().(caddyshack.StoreObject)
+	dynmaicObj.SetKey(key)
+	cobj, err := c.ReadOneFromObj(dynmaicObj)
+	return err, cobj
+	/*
+		log.Info("ReadOne : Key = ", key)
+		doc := couchdb.NewDocument(key, "", c.DbObj)
+		jsonObj, err := doc.GetDocument()
+		if err != nil {
+			return err, nil
+		}
+		log.Info("Read one resp :", string(jsonObj))
 
-	//	err, obj := c.GetStoreObj(jsonObj)
-	dynmaicObj := reflect.New(c.ObjType).Interface()
-	err = json.Unmarshal(jsonObj, dynmaicObj)
-	if err != nil {
-		return err, nil
-	}
+		//	err, obj := c.GetStoreObj(jsonObj)
+		dynmaicObj := reflect.New(c.ObjType).Interface()
+		err = json.Unmarshal(jsonObj, dynmaicObj)
+		if err != nil {
+			return err, nil
+		}
 
-	obj := dynmaicObj.(caddyshack.StoreObject)
-	obj.SetKey(doc.Id)
-	return err, obj
+		obj := dynmaicObj.(caddyshack.StoreObject)
+		obj.SetKey(doc.Id)
+		return err, obj
+	*/
 }
 
 func (c *CouchStore) DeleteOne(obj caddyshack.StoreObject) error {
@@ -217,7 +223,7 @@ func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key str
 	if !strings.Contains(desDocName, "/") {
 		desDocName = "_design/" + desDocName
 	}
-	log.Debug("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
+	log.Info("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
 	data, err := c.DbObj.GetView(desDocName, viewName, "key=\""+key+"\"")
 
 	if err != nil {

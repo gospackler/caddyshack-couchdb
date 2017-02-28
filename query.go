@@ -110,12 +110,13 @@ func NewObjQuery(obj caddyshack.StoreObject, db *CouchStore) (q *CouchQuery) {
 	q = new(CouchQuery)
 	prefix := "doc"
 
-	// FIXME : This should change based on if condition is there.
 	viewName := q.GetViewName(obj)
 	view := couchdb.NewView(viewName, prefix, q.getCondition(obj, prefix), q.getEmits(obj))
 	keyName := q.getByName(obj, prefix)
 	if keyName != "" {
 		view.KeyName = keyName
+	} else {
+		view.KeyName = prefix + "._id"
 	}
 	//Creates the DesignDoc if it does not exist.
 	desDoc := db.GetDesignDoc(db.Res.DesDoc)
