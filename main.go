@@ -175,31 +175,42 @@ func (c *CouchStore) ReadOneFromObj(obj caddyshack.StoreObject) (caddyshack.Stor
 	return c.ReadOneFromView(c.Res.DesDoc, c.DefQuery.ViewName, key)
 }
 
-func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
+func (c *CouchStore) ReadOneByKey(key string) (caddyshack.StoreObject, error) {
 	dynmaicObj := reflect.New(c.ObjType).Interface().(caddyshack.StoreObject)
 	dynmaicObj.SetKey(key)
 	cobj, err := c.ReadOneFromObj(dynmaicObj)
-	return err, cobj
+	return cobj, err
+}
+
+// ReadOne : This works only with the default id that couchdb generates.
+func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 	/*
-		log.Info("ReadOne : Key = ", key)
-		doc := couchdb.NewDocument(key, "", c.DbObj)
-		jsonObj, err := doc.GetDocument()
-		if err != nil {
-			return err, nil
-		}
-		log.Info("Read one resp :", string(jsonObj))
 
-		//	err, obj := c.GetStoreObj(jsonObj)
-		dynmaicObj := reflect.New(c.ObjType).Interface()
-		err = json.Unmarshal(jsonObj, dynmaicObj)
-		if err != nil {
-			return err, nil
-		}
-
-		obj := dynmaicObj.(caddyshack.StoreObject)
-		obj.SetKey(doc.Id)
-		return err, obj
+		fixme this is a different approach which makes it mandatory to use views.
+			dynmaicobj := reflect.new(c.objtype).interface().(caddyshack.storeobject)
+			log.info("key in read one " + key)
+			dynmaicobj.setkey(key)
+			cobj, err := c.readonefromobj(dynmaicobj)
+			return err, cobj
 	*/
+	log.Info("ReadOne : Key = ", key)
+	doc := couchdb.NewDocument(key, "", c.DbObj)
+	jsonObj, err := doc.GetDocument()
+	if err != nil {
+		return err, nil
+	}
+	log.Info("Read one resp :", string(jsonObj))
+
+	//	err, obj := c.GetStoreObj(jsonObj)
+	dynmaicObj := reflect.New(c.ObjType).Interface()
+	err = json.Unmarshal(jsonObj, dynmaicObj)
+	if err != nil {
+		return err, nil
+	}
+
+	obj := dynmaicObj.(caddyshack.StoreObject)
+	obj.SetKey(doc.Id)
+	return err, obj
 }
 
 func (c *CouchStore) DeleteOne(obj caddyshack.StoreObject) error {
@@ -232,6 +243,7 @@ func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key str
 	} else {
 		// Print for now create store Object later.
 		// FIXME Handle unmarshalling over here.
+		log.Info(string(data))
 		result, err := c.MarshalStoreObjects(data)
 		if err != nil {
 			return nil, errors.New("Could not Marshal json" + err.Error())

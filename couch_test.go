@@ -139,19 +139,19 @@ func TestReadOneAndUpdate(t *testing.T) {
 	}
 
 	if obj.GetKey() != Key {
-		t.Error("Retreived wrong object")
-	}
+		t.Errorf("Retreived wrong object " + obj.GetKey() + " requested " + Key)
+	} else {
+		actualObj := obj.(*TestObj)
+		t.Log("Got the actual object back.", actualObj)
 
-	actualObj := obj.(*TestObj)
-	t.Log("Got the actual object back.", actualObj)
-
-	actualObj.Name = "Updated"
-	actualObj.Value = "-1"
-	err = Caddy.StoreIns.UpdateOne(actualObj)
-	if err != nil {
-		t.Log("Error while updating object, ", err)
+		actualObj.Name = "Updated"
+		actualObj.Value = "-1"
+		err = Caddy.StoreIns.UpdateOne(actualObj)
+		if err != nil {
+			t.Log("Error while updating object, ", err)
+		}
+		t.Log("Check the updated object in the DB if delete is disabled with key", Key)
 	}
-	t.Log("Check the updated object in the DB if delete is disabled with key", Key)
 }
 
 func TestRead(t *testing.T) {

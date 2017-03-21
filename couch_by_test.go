@@ -6,19 +6,19 @@ import (
 	"github.com/gospackler/caddyshack/resource"
 )
 
-type TestObjBy struct {
+type TestObjBy1 struct {
 	Name   string `json:"name"`
 	Value  string `json:"surprise"`
-	Field1 string `json:"field1" by:"field1"`
+	Field1 string `json:"field1"`
 	Age    int    `json:"age"`
 	Id     string `json:"id" by:"id"`
 }
 
-func (t *TestObjBy) GetKey() string {
-	return t.Field1 + "," + t.Id
+func (t *TestObjBy1) GetKey() string {
+	return t.Id
 }
 
-func (t *TestObjBy) SetKey(id string) {
+func (t *TestObjBy1) SetKey(id string) {
 	t.Id = id
 }
 
@@ -30,12 +30,12 @@ func getByCouchStore(t *testing.T) *CouchStore {
 		DesDoc: "queries",
 	}
 
-	couchStore := NewCouchStore(res, &TestObjBy{})
+	couchStore := NewCouchStore(res, &TestObjBy1{})
 	return couchStore
 }
 
 func TestByCreate(t *testing.T) {
-	testObj := &TestObjBy{
+	testObj := &TestObjBy1{
 		Name:   "Updated",
 		Value:  "-1",
 		Field1: "field1",
@@ -51,19 +51,19 @@ func TestByCreate(t *testing.T) {
 }
 
 func TestByRead(t *testing.T) {
-	testObjDum := &TestObjBy{
-		Field1: "field1",
-		Id:     "nnnn",
-	}
+	//	testObjDum := &TestObjBy1{
+	//		Field1: "field1",
+	//		Id:     "nnnn",
+	//	}
 
 	store := getByCouchStore(t)
-	obj, err := store.ReadOneFromObj(testObjDum)
+	obj, err := store.ReadOneByKey("nnnn")
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	actualObj := obj.(*TestObjBy)
+	actualObj := obj.(*TestObjBy1)
 	if actualObj.Age != 11 {
 		t.Error("Could not retreive the object from couch")
 	}
