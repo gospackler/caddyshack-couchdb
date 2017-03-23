@@ -57,13 +57,13 @@ func TestByRead(t *testing.T) {
 	//	}
 
 	store := getByCouchStore(t)
-	obj, err := store.ReadOneByKey("nnnn")
+	obj, err := store.ReadByKey("nnnn")
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	actualObj := obj.(*TestObjBy1)
+	actualObj := obj[0].(*TestObjBy1)
 	if actualObj.Age != 11 {
 		t.Error("Could not retreive the object from couch")
 	}

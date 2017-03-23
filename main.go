@@ -169,37 +169,25 @@ func (c *CouchStore) MarshalStoreObjects(data []byte) (result []caddyshack.Store
 	return
 }
 
-func (c *CouchStore) ReadOneFromObj(obj caddyshack.StoreObject) (caddyshack.StoreObject, error) {
+func (c *CouchStore) ReadFromObj(obj caddyshack.StoreObject) ([]caddyshack.StoreObject, error) {
 	key := obj.GetKey()
-	log.Info(c.Res.DesDoc, c.DefQuery.ViewName, key)
-	return c.ReadOneFromView(c.Res.DesDoc, c.DefQuery.ViewName, key)
+	return c.ReadFromView(c.Res.DesDoc, c.DefQuery.ViewName, key)
 }
 
-func (c *CouchStore) ReadOneByKey(key string) (caddyshack.StoreObject, error) {
+func (c *CouchStore) ReadByKey(key string) ([]caddyshack.StoreObject, error) {
 	dynmaicObj := reflect.New(c.ObjType).Interface().(caddyshack.StoreObject)
 	dynmaicObj.SetKey(key)
-	cobj, err := c.ReadOneFromObj(dynmaicObj)
+	cobj, err := c.ReadFromObj(dynmaicObj)
 	return cobj, err
 }
 
 // ReadOne : This works only with the default id that couchdb generates.
 func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
-	/*
-
-		fixme this is a different approach which makes it mandatory to use views.
-			dynmaicobj := reflect.new(c.objtype).interface().(caddyshack.storeobject)
-			log.info("key in read one " + key)
-			dynmaicobj.setkey(key)
-			cobj, err := c.readonefromobj(dynmaicobj)
-			return err, cobj
-	*/
-	log.Info("ReadOne : Key = ", key)
 	doc := couchdb.NewDocument(key, "", c.DbObj)
 	jsonObj, err := doc.GetDocument()
 	if err != nil {
 		return err, nil
 	}
-	log.Info("Read one resp :", string(jsonObj))
 
 	//	err, obj := c.GetStoreObj(jsonObj)
 	dynmaicObj := reflect.New(c.ObjType).Interface()
@@ -230,20 +218,16 @@ func (c *CouchStore) DestroyOne(key string) error {
 	return c.DeleteOne(obj)
 }
 
-func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key string) (caddyshack.StoreObject, error) {
+func (c *CouchStore) ReadFromView(desDocName string, viewName string, key string) ([]caddyshack.StoreObject, error) {
 	if !strings.Contains(desDocName, "/") {
 		desDocName = "_design/" + desDocName
 	}
-	log.Info("Trying to read key " + key + " in viewName " + viewName + " of desDoc " + desDocName)
 	data, err := c.DbObj.GetView(desDocName, viewName, "key=\""+key+"\"")
 
 	if err != nil {
 		newErr := fmt.Errorf("Error retreiving : Key = %s ViewName = %s desDoc = %s :  %s", key, viewName, desDocName, err.Error())
 		return nil, newErr
 	} else {
-		// Print for now create store Object later.
-		// FIXME Handle unmarshalling over here.
-		log.Info(string(data))
 		result, err := c.MarshalStoreObjects(data)
 		if err != nil {
 			return nil, errors.New("Could not Marshal json" + err.Error())
@@ -251,8 +235,17 @@ func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key str
 		if len(result) < 1 {
 			return nil, errors.New("caddyshack-couchdb : Key not found in database ")
 		}
-		return result[0], nil
+		return result, nil
 	}
+}
+
+func (c *CouchStore) ReadOneFromView(desDocName string, viewName string, key string) (caddyshack.StoreObject, error) {
+	results, err := c.ReadFromView(desDocName, viewName, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return results[0], nil
 }
 
 func (c *CouchStore) Read(query caddyshack.Query) (error, []caddyshack.StoreObject) {
