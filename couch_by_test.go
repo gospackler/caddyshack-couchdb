@@ -51,11 +51,6 @@ func TestByCreate(t *testing.T) {
 }
 
 func TestByRead(t *testing.T) {
-	//	testObjDum := &TestObjBy1{
-	//		Field1: "field1",
-	//		Id:     "nnnn",
-	//	}
-
 	store := getByCouchStore(t)
 	obj, err := store.ReadByKey("nnnn")
 
@@ -67,4 +62,8 @@ func TestByRead(t *testing.T) {
 	if actualObj.Age != 11 {
 		t.Error("Could not retreive the object from couch")
 	}
+}
+
+func TestByDelete(t *testing.T) {
+
 }

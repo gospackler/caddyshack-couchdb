@@ -232,9 +232,6 @@ func (c *CouchStore) ReadFromView(desDocName string, viewName string, key string
 		if err != nil {
 			return nil, errors.New("Could not Marshal json" + err.Error())
 		}
-		if len(result) < 1 {
-			return nil, errors.New("caddyshack-couchdb : Key not found in database ")
-		}
 		return result, nil
 	}
 }

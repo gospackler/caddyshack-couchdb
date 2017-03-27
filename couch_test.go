@@ -262,7 +262,6 @@ func TestDef(t *testing.T) {
 	}
 }
 
-/*
 func TestGetKeyFromView(t *testing.T) {
 	store := getStoreCond(t)
 	newTestObj := new(TestObjCond)
@@ -275,9 +274,7 @@ func TestGetKeyFromView(t *testing.T) {
 	}
 	t.Log(obj)
 }
-*/
 
-/*
 func TestDelete(t *testing.T) {
 	newTestObj := new(TestObjCond)
 	store := getStoreCond(t)
@@ -294,4 +291,3 @@ func TestDelete(t *testing.T) {
 	}
 	t.Log("Successfully deleted object with name ", Key)
 }
-*/
