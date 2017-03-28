@@ -139,6 +139,7 @@ func (c *CouchStore) GetStoreObj(jsonObj []byte) (error, caddyshack.StoreObject)
 	}
 
 	obj := dynmaicObj.(caddyshack.StoreObject)
+	obj.SetKey(tempObj.Id)
 	return nil, obj
 }
 
@@ -175,10 +176,7 @@ func (c *CouchStore) ReadFromObj(obj caddyshack.StoreObject) ([]caddyshack.Store
 }
 
 func (c *CouchStore) ReadByKey(key string) ([]caddyshack.StoreObject, error) {
-	dynmaicObj := reflect.New(c.ObjType).Interface().(caddyshack.StoreObject)
-	dynmaicObj.SetKey(key)
-	cobj, err := c.ReadFromObj(dynmaicObj)
-	return cobj, err
+	return c.ReadFromView(c.Res.DesDoc, c.DefQuery.ViewName, key)
 }
 
 // ReadOne : This works only with the default id that couchdb generates.
@@ -189,7 +187,6 @@ func (c *CouchStore) ReadOne(key string) (error, caddyshack.StoreObject) {
 		return err, nil
 	}
 
-	//	err, obj := c.GetStoreObj(jsonObj)
 	dynmaicObj := reflect.New(c.ObjType).Interface()
 	err = json.Unmarshal(jsonObj, dynmaicObj)
 	if err != nil {
@@ -211,11 +208,12 @@ func (c *CouchStore) DeleteOne(obj caddyshack.StoreObject) error {
 }
 
 func (c *CouchStore) DestroyOne(key string) error {
-	err, obj := c.ReadOne(key)
+	doc := couchdb.NewDocument(key, "", c.DbObj)
+	_, err := doc.GetDocument()
 	if err != nil {
 		return err
 	}
-	return c.DeleteOne(obj)
+	return doc.Delete()
 }
 
 func (c *CouchStore) ReadFromView(desDocName string, viewName string, key string) ([]caddyshack.StoreObject, error) {
